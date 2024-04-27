@@ -1,93 +1,77 @@
-from fastapi import FastAPI, UploadFile, File, HTTPException, Depends, Body, Path
-from pydantic import BaseModel
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-from jose import JWTError, jwt
-from passlib.context import CryptContext
-from datetime import datetime, timedelta
-from typing import Dict, Optional, List, Any
-import uuid
-import psycopg2
-import json
-from datetime import date, datetime
-import smtplib  
-from email.mime.text import MIMEText
 
-from fastapi import APIRouter, Depends
+from fastapi import FastAPI, HTTPException, Depends, APIRouter
 from sqlalchemy.orm import Session
+from typing import List, Optional
 from app.database.session import get_db
-from app.models import User  # Example model
+from app.models import SessionSummary, Reminder, KnowledgeUpdate, UserSettings
 
 router = APIRouter()
 
-@router.get("/users")
-def get_users(db: Session = Depends(get_db)):
-    return db.query(User).all()
-
-
-#region
-
-# Base models for data validation
-class KnowledgeUpdate(BaseModel):
-    topic_id: int
-    new_information: str  # Updated information for a specific topic
-
-class Personalization(BaseModel):
-    user_id: int
-    preference: str  # Could be related to learning styles, etc.
-
-class UserPreference(BaseModel):
-    user_id: int
-    setting: str  # Personalization setting to update
-
-class SessionSummary(BaseModel):
-    chat_id: int
-    highlights: List[str]  # Key points from the session
-
-class Reminder(BaseModel):
-    user_id: int
-    reminder_time: str  # Scheduled time for the reminder
-    message: str  # Reminder message
-
-# PUT /chat/update-knowledge/{topicId}: Update the chatbot's knowledge base with new information
+# Update the chatbot's knowledge base with new information
 @app.put("/chat/update-knowledge/{topicId}")
-async def update_knowledge(topicId: int, update: KnowledgeUpdate):
-    # Logic to update the knowledge base
-    return {"status": "Knowledge updated", "topicId": topicId, "new_information": update.new_information}
+async def update_knowledge(topicId: int, new_information: str, db: Session = Depends(get_db)):
+    knowledge_update = db.query(KnowledgeUpdate).filter(KnowledgeUpdate.topic_id == topicId).first()
+    if not knowledge_update:
+        knowledge_update = KnowledgeUpdate(topic_id=topicId, new_information=new_information)
+        db.add(knowledge_update)
+    else:
+        knowledge_update.new_information = new_information
+    
+    db.commit()
+    db.refresh(knowledge_update)
+    return {"status": "Knowledge updated", "topic_id": topicId, "new_information": new_information}
 
-# POST /chat/personalize: Customize chatbot responses based on user preferences
+# Personalize chatbot responses based on user preferences
 @app.post("/chat/personalize")
-async def personalize_chat(personalization: Personalization):
-    # Logic to customize responses based on user preferences
-    return {"status": "Personalization applied", "preference": personalization.preference}
+async def personalize_chat(user_id: int, preference: str, db: Session = Depends(get_db)):
+    user_setting = db.query(UserSettings).filter(UserSettings.user_id == user_id, UserSettings.setting_type == "personalization").first()
+    if not user_setting:
+        user_setting = UserSettings(user_id=user_id, setting=preference, setting_type="personalization")
+        db.add(user_setting)
+    else:
+        user_setting.setting = preference
+    
+    db.commit()
+    db.refresh(user_setting)
+    return {"status": "Chat personalized", "user_id": user_id, "preference": preference}
 
-# GET /chat/preferences/{userId}: Retrieve personalization settings for a specific user
-@app.get("/chat/preferences/{userId}")
-async def get_user_preferences(userId: int):
-    # Logic to retrieve user preferences, here we're using a placeholder response
-    return {"userId": userId, "preferences": ["style1", "style2"]}
+# Generate a session summary with key points
+@app.post("/chat/session-summary")
+async def generate_session_summary(chat_id: int, highlights: List[str], db: Session = Depends(get_db)):
+    session_summary = SessionSummary(chat_id=chat_id, highlights=highlights)
+    db.add(session_summary)
+    db.commit()
+    db.refresh(session_summary)
+    return {"status": "Session summary generated", "chat_id": chat_id, "highlights": highlights}
 
-# PUT /chat/preferences/{userId}: Update personalization settings for a specific user
-@app.put("/chat/preferences/{userId}")
-async def update_user_preferences(userId: int, preference: UserPreference):
-    # Logic to update personalization settings
-    return {"status": "Preferences updated", "userId": userId, "setting": preference.setting}
+# Set a reminder for a user with a specific message
+@app.post("/chat/set-reminder")
+async def set_reminder(user_id: int, reminder_time: str, message: str, db: Session = Depends(get_db)):
+    reminder = Reminder(user_id=user_id, reminder_time=reminder_time, message=message)
+    db.add(reminder)
+    db.commit()
+    db.refresh(reminder)
+    return {"status": "Reminder set", "user_id": user_id, "message": message}
 
-# POST /chat/summarize-session: Summarize a chat session, highlighting key points
-@app.post("/chat/summarize-session")
-async def summarize_session(summary: SessionSummary):
-    # Logic to create a summary from chat interactions
-    return {"status": "Session summarized", "highlights": summary.highlights}
+# Update user settings based on preference
+@app.put("/chat/user-settings/{user_id}")
+async def update_user_settings(user_id: int, setting: str, setting_type: str, db: Session = Depends(get_db)):
+    user_setting = db.query(UserSettings).filter(UserSettings.user_id == user_id, UserSettings.setting_type == setting_type).first()
+    if not user_setting:
+        user_setting = UserSettings(user_id=user_id, setting=setting, setting_type=setting_type)
+        db.add(user_setting)
+    else:
+        user_setting.setting = setting
+    
+    db.commit()
+    db.refresh(user_setting)
+    return {"status": "User setting updated", "user_id": user_id, "setting": setting, "setting_type": setting_type}
 
-# GET /chat/topic-summary/{topicId}: Retrieve a concise summary or explanation of a specific topic
-@app.get("/chat/topic-summary/{topicId}")
-async def get_topic_summary(topicId: int):
-    # Logic to get a topic summary, returning a placeholder response
-    return {"topicId": topicId, "summary": "Brief summary of the topic"}
-
-# POST /chat/schedule-reminder: Schedule reminders for upcoming study sessions or tests
-@app.post("/chat/schedule-reminder")
-async def schedule_reminder(reminder: Reminder):
-    # Logic to schedule a reminder
-    return {"status": "Reminder scheduled", "user_id": reminder.user_id, "message": reminder.message}
-
-#endregion
+# Retrieve user settings based on user ID
+@app.get("/chat/user-settings/{user_id}")
+async def get_user_settings(user_id: int, db: Session = Depends(get_db)):
+    user_settings = db.query(UserSettings).filter(UserSettings.user_id == user_id).all()
+    if not user_settings:
+        raise HTTPException(status_code=404, detail="No user settings found")
+    
+    return user_settings

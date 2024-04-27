@@ -1,84 +1,71 @@
-from fastapi import FastAPI, UploadFile, File, HTTPException, Depends, Body, Path
-from pydantic import BaseModel
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-from jose import JWTError, jwt
-from passlib.context import CryptContext
-from datetime import datetime, timedelta
-from typing import Dict, Optional, List, Any
-import uuid
-import psycopg2
-import json
-from datetime import date, datetime
-import smtplib  
-from email.mime.text import MIMEText
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import SQLAlchemyError
+from app.models import curriculum_plan, User  # Pre-defined models
 from app.database.session import get_db
-from app.models import User  # Example model
+from typing import List
 
 router = APIRouter()
 
+# GET /users: Get all users
 @router.get("/users")
 def get_users(db: Session = Depends(get_db)):
-    return db.query(User).all()
-
-#region
-
-# Data model for a curriculum plan
-class CurriculumPlan(BaseModel):
-    user_id: int
-    plan_name: str
-    subjects: List[str]  # List of subjects or topics in the study plan
-    description: Optional[str] = None  # Optional description of the study plan
+    try:
+        return db.query(User).all()
+    except SQLAlchemyError as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 # GET /curriculum/{userId}: Fetch the personalized study plan for a specific user
-@app.get("/curriculum/{userId}")
-def get_curriculum(userId: int):
-    with connection.cursor() as cursor:
-        cursor.execute("SELECT * FROM curriculum_plans WHERE user_id = %s", (userId,))
-        plans = cursor.fetchall()
-    
-    if not plans:
-        raise HTTPException(status_code=404, detail="No curriculum plans found for this user")
-    
-    return {"user_id": userId, "curriculum_plans": plans}
+@router.get("/curriculum/{userId}")
+def get_curriculum(userId: int, db: Session = Depends(get_db)):
+    try:
+        plans = db.query(curriculum_plan).filter_by(user_id=userId).all()
+        if not plans:
+            raise HTTPException(status_code=404, detail="No curriculum plans found for this user")
+        return {"user_id": userId, "curriculum_plans": plans}
+    except SQLAlchemyError as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 # POST /curriculum: Create a new curriculum plan for a user or a group
-@app.post("/curriculum")
-def create_curriculum(plan: CurriculumPlan):
-    with connection.cursor() as cursor:
-        cursor.execute(
-            "INSERT INTO curriculum_plans (user_id, plan_name, subjects, description) VALUES (%s, %s, %s, %s) RETURNING id",
-            (plan.user_id, plan.plan_name, json.dumps(plan.subjects), plan.description)
-        )
-        connection.commit()
-        new_plan_id = cursor.fetchone()[0]
-    
-    return {"status": "Curriculum plan created", "plan_id": new_plan_id}
+@router.post("/curriculum")
+def create_curriculum(plan: curriculum_plan, db: Session = Depends(get_db)):
+    try:
+        new_plan = curriculum_plan(**plan.dict())
+        db.add(new_plan)
+        db.commit()
+        db.refresh(new_plan)
+        return {"status": "Curriculum plan created", "plan_id": new_plan.id}
+    except SQLAlchemyError as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 # PUT /curriculum/{id}: Update an existing study plan
-@app.put("/curriculum/{id}")
-def update_curriculum(
-    id: int,
-    updated_plan: CurriculumPlan
-):
-    with connection.cursor() as cursor:
-        cursor.execute(
-            "UPDATE curriculum_plans SET plan_name = %s, subjects = %s, description = %s WHERE id = %s",
-            (updated_plan.plan_name, json.dumps(updated_plan.subjects), updated_plan.description, id)
-        )
-        connection.commit()
-    
-    return {"status": "Curriculum plan updated"}
+@router.put("/curriculum/{id}")
+def update_curriculum(id: int, updated_plan: curriculum_plan, db: Session = Depends(get_db)):
+    try:
+        existing_plan = db.query(curriculum_plan).filter_by(id=id).first()
+        if not existing_plan:
+            raise HTTPException(status_code=404, detail="Curriculum plan not found")
+        
+        for key, value in updated_plan.dict().items():
+            setattr(existing_plan, key, value)
+        
+        db.commit()
+        db.refresh(existing_plan)
+        return {"status": "Curriculum plan updated"}
+    except SQLAlchemyError as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 # DELETE /curriculum/{id}: Delete a study plan
-@app.delete("/curriculum/{id}")
-def delete_curriculum(id: int):
-    with connection.cursor() as cursor:
-        cursor.execute("DELETE FROM curriculum_plans WHERE id = %s", (id,))
-        connection.commit()
-    
-    return {"status": "Curriculum plan deleted"}
+@router.delete("/curriculum/{id}")
+def delete_curriculum(id: int, db: Session = Depends(get_db)):
+    try:
+        plan_to_delete = db.query(curriculum_plan).filter_by(id=id).first()
+        if not plan_to_delete:
+            raise HTTPException(status_code=404, detail="Curriculum plan not found")
 
-#endregion
+        db.delete(plan_to_delete)
+        db.commit()
+        return {"status": "Curriculum plan deleted"}
+    except SQLAlchemyError as e:
+        raise HTTPException(status_code=500, detail=str(e))

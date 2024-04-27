@@ -1,91 +1,64 @@
-from fastapi import FastAPI, UploadFile, File, HTTPException, Depends, Body, Path
-from pydantic import BaseModel
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-from jose import JWTError, jwt
-from passlib.context import CryptContext
-from datetime import datetime, timedelta
-from typing import Dict, Optional, List, Any
-import uuid
-import psycopg2
-import json
-from datetime import date, datetime
-import smtplib  
-from email.mime.text import MIMEText
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, Path
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import SQLAlchemyError
+from app.models import homework  # Pre-defined SQLAlchemy model
 from app.database.session import get_db
-from app.models import User  # Example model
+from typing import Optional, List
 
 router = APIRouter()
 
-@router.get("/users")
-def get_users(db: Session = Depends(get_db)):
-    return db.query(User).all()
-
-#region
-
-# Define data model for homework assignments
-class Homework(BaseModel):
-    id: int
-    user_id: int
-    assignment: str
-    due_date: Optional[date]
-    details: Optional[str]
-
 # GET /homework/{userId}: Retrieve all homework assignments for a specific user
-@app.get("/homework/{userId}")
-def get_homework(
-    userId: int = Path(..., description="Unique identifier for the user")
-):
-    with connection.cursor() as cursor:
-        cursor.execute("SELECT * FROM homework_table WHERE user_id = %s", (userId,))
-        results = cursor.fetchall()
-    
-    if not results:
-        raise HTTPException(status_code=404, detail="No homework assignments found")
-    
-    homework = [{"id": r[0], "user_id": r[1], "assignment": r[2], "due_date": r[3], "details": r[4]} for r in results]
-    
-    return {"homework": homework}
+@router.get("/homework/{userId}")
+def get_homework(userId: int, db: Session = Depends(get_db)):
+    try:
+        results = db.query(homework).filter_by(user_id=userId).all()
+        if not results:
+            raise HTTPException(status_code=404, detail="No homework assignments found")
+        
+        homework_assignments = [{"id": r.id, "user_id": r.user_id, "assignment": r.assignment, "due_date": r.due_date, "details": r.details} for r in results]
+        return {"homework": homework_assignments}
+    except SQLAlchemyError as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 # POST /homework: Assign new homework to a user or group
-@app.post("/homework")
-def assign_homework(homework: Homework):
-    with connection.cursor() as cursor:
-        cursor.execute(
-            "INSERT INTO homework_table (user_id, assignment, due_date, details) VALUES (%s, %s, %s, %s) RETURNING id",
-            (homework.user_id, homework.assignment, homework.due_date, homework.details)
-        )
-        new_id = cursor.fetchone()[0]
-        connection.commit()
-    
-    return {"message": "Homework assigned", "homework_id": new_id}
+@router.post("/homework")
+def assign_homework(new_homework: homework, db: Session = Depends(get_db)):
+    try:
+        db.add(new_homework)
+        db.commit()
+        db.refresh(new_homework)
+        return {"message": "Homework assigned", "homework_id": new_homework.id}
+    except SQLAlchemyError as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 # PUT /homework/{id}: Update details or deadlines of an existing homework assignment
-@app.put("/homework/{id}")
-def update_homework(
-    id: int,
-    updated_homework: Homework
-):
-    with connection.cursor() as cursor:
-        cursor.execute(
-            "UPDATE homework_table SET assignment = %s, due_date = %s, details = %s WHERE id = %s",
-            (updated_homework.assignment, updated_homework.due_date, updated_homework.details, id)
-        )
-        connection.commit()
-    
-    return {"message": "Homework updated"}
+@router.put("/homework/{id}")
+def update_homework(id: int, updated_homework: homework, db: Session = Depends(get_db)):
+    try:
+        existing_homework = db.query(homework).filter_by(id=id).first()
+        if not existing_homework:
+            raise HTTPException(status_code=404, detail="Homework not found")
+        
+        for key, value in updated_homework.dict().items():
+            setattr(existing_homework, key, value)
+        
+        db.commit()
+        db.refresh(existing_homework)
+        return {"message": "Homework updated"}
+    except SQLAlchemyError as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 # DELETE /homework/{id}: Remove a homework assignment
-@app.delete("/homework/{id}")
-def delete_homework(
-    id: int = Path(..., description="Unique identifier for the homework assignment")
-):
-    with connection.cursor() as cursor:
-        cursor.execute("DELETE FROM homework_table WHERE id = %s", (id,))
-        connection.commit()
-    
-    return {"message": "Homework deleted"}
+@router.delete("/homework/{id}")
+def delete_homework(id: int, db: Session = Depends(get_db)):
+    try:
+        homework_to_delete = db.query(homework).filter_by(id=id).first()
+        if not homework_to_delete:
+            raise HTTPException(status_code=404, detail="Homework not found")
 
-#endregion
+        db.delete(homework_to_delete)
+        db.commit()
+        return {"message": "Homework deleted"}
+    except SQLAlchemyError as e:
+        raise HTTPException(status_code=500, detail=str(e))
