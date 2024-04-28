@@ -22,7 +22,7 @@ def list_users(db: Session = Depends(get_db)):
 
 # POST /admin/actions: Record an admin action (admin access)
 @router.post("/admin/actions", dependencies=[Depends(admin_auth)])
-def record_admin_action(action_type: str, user_id: int, details: str, db: Session = Depends(get_db)):
+async def record_admin_action(action_type: str, user_id: int, details: str, db: Session = Depends(get_db)):
     # Create a new admin action record with SQLAlchemy
     new_action = AdminActionsTable(
         action_type=action_type,
@@ -41,7 +41,7 @@ def record_admin_action(action_type: str, user_id: int, details: str, db: Sessio
 
 # DELETE /admin/users/{user_id}: Remove a user from the platform (admin access)
 @router.delete("/admin/users/{user_id}", dependencies=[Depends(admin_auth)])
-def delete_user(user_id: int, db: Session = Depends(get_db)):
+async def delete_user(user_id: int, db: Session = Depends(get_db)):
     # Delete a user with SQLAlchemy
     user = db.query(User).filter(User.id == user_id).first()
 
@@ -55,14 +55,14 @@ def delete_user(user_id: int, db: Session = Depends(get_db)):
 
 # GET /admin/actions: List all admin actions (admin access)
 @router.get("/admin/actions", dependencies=[Depends(admin_auth)])
-def list_admin_actions(db: Session = Depends(get_db)):
+async def list_admin_actions(db: Session = Depends(get_db)):
     # List all admin actions with SQLAlchemy
     admin_actions = db.query(AdminActionsTable).all()
     return admin_actions
 
 # PUT /admin/users/{user_id}: Update a user's role or status (admin access)
 @router.put("/admin/users/{user_id}", dependencies=[Depends(admin_auth)])
-def update_user_role_or_status(user_id: int, new_role: str, new_status: bool, db: Session = Depends(get_db)):
+async def update_user_role_or_status(user_id: int, new_role: str, new_status: bool, db: Session = Depends(get_db)):
     # Update a user's role or status with SQLAlchemy
     user = db.query(User).filter(User.id == user_id).first()
 

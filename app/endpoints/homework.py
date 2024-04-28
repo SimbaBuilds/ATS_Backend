@@ -10,7 +10,7 @@ router = APIRouter()
 
 # GET /homework/{userId}: Retrieve all homework assignments for a specific user
 @router.get("/homework/{userId}")
-def get_homework(userId: int, db: Session = Depends(get_db)):
+async def get_homework(userId: int, db: Session = Depends(get_db)):
     try:
         results = db.query(homework).filter_by(user_id=userId).all()
         if not results:
@@ -23,7 +23,7 @@ def get_homework(userId: int, db: Session = Depends(get_db)):
 
 # POST /homework: Assign new homework to a user or group
 @router.post("/homework")
-def assign_homework(new_homework: homework, db: Session = Depends(get_db)):
+async def assign_homework(new_homework: homework, db: Session = Depends(get_db)):
     try:
         db.add(new_homework)
         db.commit()
@@ -34,7 +34,7 @@ def assign_homework(new_homework: homework, db: Session = Depends(get_db)):
 
 # PUT /homework/{id}: Update details or deadlines of an existing homework assignment
 @router.put("/homework/{id}")
-def update_homework(id: int, updated_homework: homework, db: Session = Depends(get_db)):
+async def update_homework(id: int, updated_homework: homework, db: Session = Depends(get_db)):
     try:
         existing_homework = db.query(homework).filter_by(id=id).first()
         if not existing_homework:
@@ -51,7 +51,7 @@ def update_homework(id: int, updated_homework: homework, db: Session = Depends(g
 
 # DELETE /homework/{id}: Remove a homework assignment
 @router.delete("/homework/{id}")
-def delete_homework(id: int, db: Session = Depends(get_db)):
+async def delete_homework(id: int, db: Session = Depends(get_db)):
     try:
         homework_to_delete = db.query(homework).filter_by(id=id).first()
         if not homework_to_delete:

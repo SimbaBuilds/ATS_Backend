@@ -1,13 +1,13 @@
 
 from fastapi import FastAPI, UploadFile, File, HTTPException, Depends, APIRouter
 from sqlalchemy.orm import Session
-from models import UserMessage, ChatbotResponse, Feedback
+from app.models import UserMessage, ChatbotResponse, Feedback
 from database import get_db  # Assuming the database session function exists
 
 router = APIRouter()
 
 # Endpoint for handling user messages and returning chatbot responses
-@app.post("/chat/respond")
+@router.post("/chat/respond")
 async def chatbot_respond(message: UserMessage, db: Session = Depends(get_db)):
     # Generate a chatbot response
     response_content = f"Received your message: {{message.content}}"
@@ -17,19 +17,19 @@ async def chatbot_respond(message: UserMessage, db: Session = Depends(get_db)):
     return chatbot_response
 
 # POST /vision/analyze: Accepts file uploads
-@app.post("/vision/analyze")
+@router.post("/vision/analyze")
 async def analyze_image(file: UploadFile = File(...)):
     return {"filename": file.filename, "status": "Processed"}
 
 # POST /chat/message: Accepts user messages for the chatbot
-@app.post("/chat/message")
+@router.post("/chat/message")
 async def chat_message(message: UserMessage, db: Session = Depends(get_db)):
     db.add(message)
     db.commit()
     return {"status": "Message received", "content": message.content}
 
 # GET /chat/history/{user_id}: Retrieves chat history for a specific user
-@app.get("/chat/history/{user_id}")
+@router.get("/chat/history/{user_id}")
 async def chat_history(user_id: int, db: Session = Depends(get_db)):
     chat_history = db.query(UserMessage).filter(UserMessage.user_id == user_id).all()
     if not chat_history:
@@ -37,7 +37,7 @@ async def chat_history(user_id: int, db: Session = Depends(get_db)):
     return chat_history
 
 # POST /chat/feedback: Accepts user feedback
-@app.post("/chat/feedback")
+@router.post("/chat/feedback")
 async def submit_feedback(feedback: Feedback, db: Session = Depends(get_db)):
     db.add(feedback)
     db.commit()

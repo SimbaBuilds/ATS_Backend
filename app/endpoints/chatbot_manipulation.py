@@ -8,7 +8,7 @@ from app.models import SessionSummary, Reminder, KnowledgeUpdate, UserSettings
 router = APIRouter()
 
 # Update the chatbot's knowledge base with new information
-@app.put("/chat/update-knowledge/{topicId}")
+@router.put("/chat/update-knowledge/{topicId}")
 async def update_knowledge(topicId: int, new_information: str, db: Session = Depends(get_db)):
     knowledge_update = db.query(KnowledgeUpdate).filter(KnowledgeUpdate.topic_id == topicId).first()
     if not knowledge_update:
@@ -22,7 +22,7 @@ async def update_knowledge(topicId: int, new_information: str, db: Session = Dep
     return {"status": "Knowledge updated", "topic_id": topicId, "new_information": new_information}
 
 # Personalize chatbot responses based on user preferences
-@app.post("/chat/personalize")
+@router.post("/chat/personalize")
 async def personalize_chat(user_id: int, preference: str, db: Session = Depends(get_db)):
     user_setting = db.query(UserSettings).filter(UserSettings.user_id == user_id, UserSettings.setting_type == "personalization").first()
     if not user_setting:
@@ -36,7 +36,7 @@ async def personalize_chat(user_id: int, preference: str, db: Session = Depends(
     return {"status": "Chat personalized", "user_id": user_id, "preference": preference}
 
 # Generate a session summary with key points
-@app.post("/chat/session-summary")
+@router.post("/chat/session-summary")
 async def generate_session_summary(chat_id: int, highlights: List[str], db: Session = Depends(get_db)):
     session_summary = SessionSummary(chat_id=chat_id, highlights=highlights)
     db.add(session_summary)
@@ -45,7 +45,7 @@ async def generate_session_summary(chat_id: int, highlights: List[str], db: Sess
     return {"status": "Session summary generated", "chat_id": chat_id, "highlights": highlights}
 
 # Set a reminder for a user with a specific message
-@app.post("/chat/set-reminder")
+@router.post("/chat/set-reminder")
 async def set_reminder(user_id: int, reminder_time: str, message: str, db: Session = Depends(get_db)):
     reminder = Reminder(user_id=user_id, reminder_time=reminder_time, message=message)
     db.add(reminder)
@@ -54,7 +54,7 @@ async def set_reminder(user_id: int, reminder_time: str, message: str, db: Sessi
     return {"status": "Reminder set", "user_id": user_id, "message": message}
 
 # Update user settings based on preference
-@app.put("/chat/user-settings/{user_id}")
+@router.put("/chat/user-settings/{user_id}")
 async def update_user_settings(user_id: int, setting: str, setting_type: str, db: Session = Depends(get_db)):
     user_setting = db.query(UserSettings).filter(UserSettings.user_id == user_id, UserSettings.setting_type == setting_type).first()
     if not user_setting:
@@ -68,7 +68,7 @@ async def update_user_settings(user_id: int, setting: str, setting_type: str, db
     return {"status": "User setting updated", "user_id": user_id, "setting": setting, "setting_type": setting_type}
 
 # Retrieve user settings based on user ID
-@app.get("/chat/user-settings/{user_id}")
+@router.get("/chat/user-settings/{user_id}")
 async def get_user_settings(user_id: int, db: Session = Depends(get_db)):
     user_settings = db.query(UserSettings).filter(UserSettings.user_id == user_id).all()
     if not user_settings:

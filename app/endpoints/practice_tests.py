@@ -7,12 +7,12 @@ from app.database.session import get_db  # Database session setup
 from app.models import practice_tests_table, test_attempts  # Using existing SQLAlchemy models
 
 
-# Define FastAPI router
+# define FastAPI router
 router = APIRouter()
 
 # GET /test/{id}: Get details about a specific quiz or test
 @router.get("/test/{id}")
-def get_test(
+async def get_test(
     id: int = Path(..., description="Unique identifier for the test"),
     db: Session = Depends(get_db)
 ):
@@ -34,7 +34,7 @@ def get_test(
 
 # POST /test: Create a new quiz or test (admin or teacher access)
 @router.post("/test")
-def create_test(
+async def create_test(
     test_name: str,
     content: dict,
     db: Session = Depends(get_db)
@@ -51,7 +51,7 @@ def create_test(
 
 # DELETE /test/{id}: Delete a specific test
 @router.delete("/test/{id}")
-def delete_test(
+async def delete_test(
     id: int = Path(..., description="Unique identifier for the test"),
     db: Session = Depends(get_db)
 ):

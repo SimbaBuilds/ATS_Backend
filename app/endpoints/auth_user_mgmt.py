@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 from typing import Optional, List
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from app.database.session import get_db
-from app.models import User
+from app.models import users
 from passlib.context import CryptContext
 from jose import jwt
 
@@ -39,33 +39,33 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 
-def authenticate_user(db: Session, username: str, password: str) -> Optional[User]:
-    user = db.query(User).filter(User.username == username).first()
+def authenticate_user(db: Session, username: str, password: str):
+    user = db.query(users).filter(users.username == username).first()
     if user and verify_password(password, user.password_hash):
         return user
     return None
 
 # Get all users
-@app.get("/users", response_model=List[User])
-def get_users(db: Session = Depends(get_db)):
-    users = db.query(User).all()
+@router.get("/users", response_model=users)
+async def get_users(db: Session = Depends(get_db)):
+    users = db.query(users).all()
     if not users:
         raise HTTPException(status_code=404, detail="No users found")
     return users
 
 # Get a specific user by ID
-@app.get("/users/{user_id}", response_model=User)
-def get_user(user_id: int, db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.id == user_id).first()
+@router.get("/users/{user_id}", response_model=users)
+async def get_user(user_id: int, db: Session = Depends(get_db)):
+    user = db.query(users).filter(users.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     return user
 
 # Register a new user
-@app.post("/auth/register_user", response_model=User)
-def register_user(username: str, email: str, password: str, db: Session = Depends(get_db)):
+@router.post("/auth/register_user", response_model=users)
+async def register_user(username: str, email: str, password: str, db: Session = Depends(get_db)):
     hashed_password = hash_password(password)
-    user = User(
+    user = users(
         username=username,
         email=email,
         password_hash=hashed_password
@@ -76,8 +76,8 @@ def register_user(username: str, email: str, password: str, db: Session = Depend
     return user
 
 # User login endpoint
-@app.post("/auth/login", response_model=Token)
-def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+@router.post("/auth/login", response_model=users)
+async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
     user = authenticate_user(db, form_data.username, form_data.password)
     if not user:
         raise HTTPException(status_code=401, detail="Invalid username or password")
@@ -89,9 +89,9 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
     return {"access_token": access_token, "token_type": "bearer"}
 
 # Update user information
-@app.put("/users/{user_id}", response_model=User)
-def update_user(user_id: int, update_data: dict, db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.id == user_id).first()
+@router.put("/users/{user_id}", response_model=users)
+async def update_user(user_id: int, update_data: dict, db: Session = Depends(get_db)):
+    user = db.query(users).filter(users.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     
@@ -103,9 +103,9 @@ def update_user(user_id: int, update_data: dict, db: Session = Depends(get_db)):
     return user
 
 # Delete a user
-@app.delete("/users/{user_id}")
-def delete_user(user_id: int, db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.id == user_id).first()
+@router.delete("/users/{user_id}")
+async def delete_user(user_id: int, db: Session = Depends(get_db)):
+    user = db.query(users).filter(users.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     

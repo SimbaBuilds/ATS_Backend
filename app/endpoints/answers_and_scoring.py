@@ -15,7 +15,7 @@ def admin_auth():
 
 # POST /answers: Submit answers for a quiz or practice test
 @router.post("/answers")
-def submit_answer(user_id: int, quiz_id: int, question_id: int, answer: str, correct: bool, db: Session = Depends(get_db)):
+async def submit_answer(user_id: int, quiz_id: int, question_id: int, answer: str, correct: bool, db: Session = Depends(get_db)):
     # Create a new answer record with SQLAlchemy
     new_answer = AnswersAndScoringTable(
         user_id=user_id,
@@ -34,21 +34,21 @@ def submit_answer(user_id: int, quiz_id: int, question_id: int, answer: str, cor
 
 # GET /answers/user/{user_id}: Retrieve all submissions by a specific user
 @router.get("/answers/user/{user_id}")
-def get_user_answers(user_id: int, db: Session = Depends(get_db)):
+async def get_user_answers(user_id: int, db: Session = Depends(get_db)):
     # Retrieve all submissions by a specific user
     user_answers = db.query(AnswersAndScoringTable).filter(AnswersAndScoringTable.user_id == user_id).all()
     return user_answers
 
 # GET /answers/quiz/{quiz_id}: Retrieve all answers for a specific quiz
 @router.get("/answers/quiz/{quiz_id}")
-def get_quiz_answers(quiz_id: int, db: Session = Depends(get_db)):
+async def get_quiz_answers(quiz_id: int, db: Session = Depends(get_db)):
     # Retrieve all answers for a specific quiz
     quiz_answers = db.query(AnswersAndScoringTable).filter(AnswersAndScoringTable.quiz_id == quiz_id).all()
     return quiz_answers
 
 # PUT /answers/{answer_id}: Update a submitted answer
 @router.put("/answers/{answer_id}")
-def update_answer(answer_id: int, answer: str, correct: bool, db: Session = Depends(get_db)):
+async def update_answer(answer_id: int, answer: str, correct: bool, db: Session = Depends(get_db)):
     # Update a submitted answer with SQLAlchemy
     existing_answer = db.query(AnswersAndScoringTable).filter(AnswersAndScoringTable.id == answer_id).first()
 
@@ -65,7 +65,7 @@ def update_answer(answer_id: int, answer: str, correct: bool, db: Session = Depe
 
 # GET /question_bank: Retrieve all questions in the bank
 @router.get("/question_bank")
-def get_question_bank(db: Session = Depends(get_db)):
+async def get_question_bank(db: Session = Depends(get_db)):
     # Retrieve all questions from the question bank
     questions = db.query(QuestionBank).all()
     return questions

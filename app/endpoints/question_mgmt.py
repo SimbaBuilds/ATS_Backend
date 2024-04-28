@@ -8,15 +8,15 @@ import json
 router = APIRouter()
 
 
-@app.get("/questions/{question_id}")
-def get_question(question_id: int, db: Session = Depends(get_db)):
+@router.get("/questions/{question_id}")
+async def get_question(question_id: int, db: Session = Depends(get_db)):
     question = db.query(QuestionBank).filter(QuestionBank.id == question_id).first()
     if not question:
         raise HTTPException(status_code=404, detail="Question not found")
     return {"question": question}
 
-@app.put("/questions/{question_id}")
-def update_question(question_id: int, db: Session = Depends(get_db)):
+@router.put("/questions/{question_id}")
+async def update_question(question_id: int, db: Session = Depends(get_db)):
     question = db.query(QuestionBank).filter(QuestionBank.id == question_id).first()
     if not question:
         raise HTTPException(status_code=404, detail="Question not found")
@@ -26,8 +26,8 @@ def update_question(question_id: int, db: Session = Depends(get_db)):
     db.commit()
     return {"message": "Question updated"}
 
-@app.delete("/questions/{question_id}")
-def delete_question(question_id: int, db: Session = Depends(get_db)):
+@router.delete("/questions/{question_id}")
+async def delete_question(question_id: int, db: Session = Depends(get_db)):
     question = db.query(QuestionBank).filter(QuestionBank.id == question_id).first()
     if not question:
         raise HTTPException(status_code=404, detail="Question not found")
@@ -35,15 +35,15 @@ def delete_question(question_id: int, db: Session = Depends(get_db)):
     db.commit()
     return {"message": "Question deleted"}
 
-@app.get("/practice_tests/{test_id}")
-def get_practice_test(test_id: int, db: Session = Depends(get_db)):
+@router.get("/practice_tests/{test_id}")
+async def get_practice_test(test_id: int, db: Session = Depends(get_db)):
     practice_test = db.query(PracticeTestsTable).filter(PracticeTestsTable.id == test_id).first()
     if not practice_test:
         raise HTTPException(status_code=404, detail="Practice test not found")
     return {"practice_test": practice_test}
 
-@app.put("/practice_tests/{test_id}")
-def update_practice_test(test_id: int, db: Session = Depends(get_db)):
+@router.put("/practice_tests/{test_id}")
+async def update_practice_test(test_id: int, db: Session = Depends(get_db)):
     practice_test = db.query(PracticeTestsTable).filter(PracticeTestsTable.id == test_id).first()
     if not practice_test:
         raise HTTPException(status_code=404, detail="Practice test not found")
@@ -52,8 +52,8 @@ def update_practice_test(test_id: int, db: Session = Depends(get_db)):
     db.commit()
     return {"message": "Practice test updated"}
 
-@app.delete("/practice_tests/{test_id}")
-def delete_practice_test(test_id: int, db: Session = Depends(get_db)):
+@router.delete("/practice_tests/{test_id}")
+async def delete_practice_test(test_id: int, db: Session = Depends(get_db)):
     practice_test = db.query(PracticeTestsTable).filter(PracticeTestsTable.id == test_id).first()
     if not practice_test:
         raise HTTPException(status_code=404, detail="Practice test not found")
@@ -64,8 +64,8 @@ def delete_practice_test(test_id: int, db: Session = Depends(get_db)):
 # Additional endpoints for CRUD operations inside a practice test must be adjusted based on your JSON structure
 # and might need a more complex handling depending on your actual practice test schema and requirements.
 
-@app.get("/practice_tests/{test_id}/questions/{question_key}")
-def get_practice_test_question(test_id: int, question_key: str, db: Session = Depends(get_db)):
+@router.get("/practice_tests/{test_id}/questions/{question_key}")
+async def get_practice_test_question(test_id: int, question_key: str, db: Session = Depends(get_db)):
     practice_test = db.query(PracticeTestsTable).filter(PracticeTestsTable.id == test_id).first()
     if not practice_test or question_key not in practice_test.content:
         raise HTTPException(status_code=404, detail="Question not found")
