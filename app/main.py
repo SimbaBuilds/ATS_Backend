@@ -6,7 +6,6 @@ from datetime import datetime, timedelta
 from typing import Dict, Optional, List, Any
 import uuid
 import psycopg2
-import json
 from datetime import date, datetime
 import smtplib  # For sending emails  
 from email.mime.text import MIMEText
@@ -68,4 +67,7 @@ connection = psycopg2.connect(
 #endregion
 
 
-# uvicorn main:app --reload
+
+
+# uvicorn app.main:app --reload
+

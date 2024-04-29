@@ -5,6 +5,8 @@ from typing import List, Optional
 from app.database.session import get_db
 from app.models import SessionSummary, Reminder, KnowledgeUpdate, UserSettings
 
+
+
 router = APIRouter()
 
 # Update the chatbot's knowledge base with new information

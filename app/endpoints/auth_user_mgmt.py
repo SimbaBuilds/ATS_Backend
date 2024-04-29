@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 from typing import Optional, List
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from app.database.session import get_db
-from app.models import users
+from app.models import User
 from passlib.context import CryptContext
 from jose import jwt
 
@@ -40,13 +40,13 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
     return encoded_jwt
 
 def authenticate_user(db: Session, username: str, password: str):
-    user = db.query(users).filter(users.username == username).first()
+    user = db.query(User).filter(User.username == username).first()
     if user and verify_password(password, user.password_hash):
         return user
     return None
 
 # Get all users
-@router.get("/users", response_model=users)
+@router.get("/users", response_model=User)
 async def get_users(db: Session = Depends(get_db)):
     users = db.query(users).all()
     if not users:
@@ -54,18 +54,18 @@ async def get_users(db: Session = Depends(get_db)):
     return users
 
 # Get a specific user by ID
-@router.get("/users/{user_id}", response_model=users)
+@router.get("/users/{user_id}", response_model=User)
 async def get_user(user_id: int, db: Session = Depends(get_db)):
-    user = db.query(users).filter(users.id == user_id).first()
+    user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     return user
 
 # Register a new user
-@router.post("/auth/register_user", response_model=users)
+@router.post("/auth/register_user", response_model=User)
 async def register_user(username: str, email: str, password: str, db: Session = Depends(get_db)):
     hashed_password = hash_password(password)
-    user = users(
+    user = User(
         username=username,
         email=email,
         password_hash=hashed_password
@@ -76,7 +76,7 @@ async def register_user(username: str, email: str, password: str, db: Session = 
     return user
 
 # User login endpoint
-@router.post("/auth/login", response_model=users)
+@router.post("/auth/login", response_model=User)
 async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
     user = authenticate_user(db, form_data.username, form_data.password)
     if not user:
@@ -89,9 +89,9 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = 
     return {"access_token": access_token, "token_type": "bearer"}
 
 # Update user information
-@router.put("/users/{user_id}", response_model=users)
+@router.put("/users/{user_id}", response_model=User)
 async def update_user(user_id: int, update_data: dict, db: Session = Depends(get_db)):
-    user = db.query(users).filter(users.id == user_id).first()
+    user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     
@@ -105,7 +105,7 @@ async def update_user(user_id: int, update_data: dict, db: Session = Depends(get
 # Delete a user
 @router.delete("/users/{user_id}")
 async def delete_user(user_id: int, db: Session = Depends(get_db)):
-    user = db.query(users).filter(users.id == user_id).first()
+    user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     

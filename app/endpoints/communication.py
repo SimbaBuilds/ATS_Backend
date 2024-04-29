@@ -1,11 +1,11 @@
 from fastapi import FastAPI, HTTPException, Depends, Body, Path
 from sqlalchemy.orm import Session
 from app.database.session import get_db  # Make sure this points correctly to your database session utility.
-from app.models import User, Notification, Feedback  # Assuming User and other models are async defined correctly in your models
 from datetime import datetime
 import smtplib
 from email.mime.text import MIMEText
 from fastapi import APIRouter
+from app.models import User, Feedback, Notification
 
 router = APIRouter()
 

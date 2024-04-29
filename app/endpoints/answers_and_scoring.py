@@ -2,9 +2,7 @@ from sqlalchemy.orm import Session
 from fastapi import APIRouter, Depends, HTTPException
 from datetime import datetime
 from app.database.session import get_db
-from app.models import users  # Assuming User model from users.py
-from app.models import AnswersAndScoringTable  # Assuming this is the answers and scoring model
-from app.models import QuestionBank  # Assuming this is the question bank model
+from app.models import User, Answer, QuestionBank  #
 
 router = APIRouter()
 
@@ -17,7 +15,7 @@ def admin_auth():
 @router.post("/answers")
 async def submit_answer(user_id: int, quiz_id: int, question_id: int, answer: str, correct: bool, db: Session = Depends(get_db)):
     # Create a new answer record with SQLAlchemy
-    new_answer = AnswersAndScoringTable(
+    new_answer = Answer(
         user_id=user_id,
         quiz_id=quiz_id,
         question_id=question_id,
@@ -36,21 +34,21 @@ async def submit_answer(user_id: int, quiz_id: int, question_id: int, answer: st
 @router.get("/answers/user/{user_id}")
 async def get_user_answers(user_id: int, db: Session = Depends(get_db)):
     # Retrieve all submissions by a specific user
-    user_answers = db.query(AnswersAndScoringTable).filter(AnswersAndScoringTable.user_id == user_id).all()
+    user_answers = db.query(Answer).filter(Answer.user_id == user_id).all()
     return user_answers
 
 # GET /answers/quiz/{quiz_id}: Retrieve all answers for a specific quiz
 @router.get("/answers/quiz/{quiz_id}")
 async def get_quiz_answers(quiz_id: int, db: Session = Depends(get_db)):
     # Retrieve all answers for a specific quiz
-    quiz_answers = db.query(AnswersAndScoringTable).filter(AnswersAndScoringTable.quiz_id == quiz_id).all()
+    quiz_answers = db.query(Answer).filter(Answer.quiz_id == quiz_id).all()
     return quiz_answers
 
 # PUT /answers/{answer_id}: Update a submitted answer
 @router.put("/answers/{answer_id}")
 async def update_answer(answer_id: int, answer: str, correct: bool, db: Session = Depends(get_db)):
     # Update a submitted answer with SQLAlchemy
-    existing_answer = db.query(AnswersAndScoringTable).filter(AnswersAndScoringTable.id == answer_id).first()
+    existing_answer = db.query(Answer).filter(Answer.id == answer_id).first()
 
     if not existing_answer:
         raise HTTPException(status_code=404, detail="Answer not found")

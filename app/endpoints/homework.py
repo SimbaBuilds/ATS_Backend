@@ -2,7 +2,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Path
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import SQLAlchemyError
-from app.models import homework  # Pre-defined SQLAlchemy model
+from app.models import Homework  # Pre-defined SQLAlchemy model
 from app.database.session import get_db
 from typing import Optional, List
 
@@ -12,7 +12,7 @@ router = APIRouter()
 @router.get("/homework/{userId}")
 async def get_homework(userId: int, db: Session = Depends(get_db)):
     try:
-        results = db.query(homework).filter_by(user_id=userId).all()
+        results = db.query(Homework).filter_by(user_id=userId).all()
         if not results:
             raise HTTPException(status_code=404, detail="No homework assignments found")
         
@@ -23,7 +23,7 @@ async def get_homework(userId: int, db: Session = Depends(get_db)):
 
 # POST /homework: Assign new homework to a user or group
 @router.post("/homework")
-async def assign_homework(new_homework: homework, db: Session = Depends(get_db)):
+async def assign_homework(new_homework: Homework, db: Session = Depends(get_db)):
     try:
         db.add(new_homework)
         db.commit()
@@ -34,9 +34,9 @@ async def assign_homework(new_homework: homework, db: Session = Depends(get_db))
 
 # PUT /homework/{id}: Update details or deadlines of an existing homework assignment
 @router.put("/homework/{id}")
-async def update_homework(id: int, updated_homework: homework, db: Session = Depends(get_db)):
+async def update_homework(id: int, updated_homework: Homework, db: Session = Depends(get_db)):
     try:
-        existing_homework = db.query(homework).filter_by(id=id).first()
+        existing_homework = db.query(Homework).filter_by(id=id).first()
         if not existing_homework:
             raise HTTPException(status_code=404, detail="Homework not found")
         
@@ -53,7 +53,7 @@ async def update_homework(id: int, updated_homework: homework, db: Session = Dep
 @router.delete("/homework/{id}")
 async def delete_homework(id: int, db: Session = Depends(get_db)):
     try:
-        homework_to_delete = db.query(homework).filter_by(id=id).first()
+        homework_to_delete = db.query(Homework).filter_by(id=id).first()
         if not homework_to_delete:
             raise HTTPException(status_code=404, detail="Homework not found")
 

@@ -7,7 +7,6 @@ import json
 
 router = APIRouter()
 
-
 @router.get("/questions/{question_id}")
 async def get_question(question_id: int, db: Session = Depends(get_db)):
     question = db.query(QuestionBank).filter(QuestionBank.id == question_id).first()
@@ -61,8 +60,6 @@ async def delete_practice_test(test_id: int, db: Session = Depends(get_db)):
     db.commit()
     return {"message": "Practice test deleted"}
 
-# Additional endpoints for CRUD operations inside a practice test must be adjusted based on your JSON structure
-# and might need a more complex handling depending on your actual practice test schema and requirements.
 
 @router.get("/practice_tests/{test_id}/questions/{question_key}")
 async def get_practice_test_question(test_id: int, question_key: str, db: Session = Depends(get_db)):
@@ -71,6 +68,4 @@ async def get_practice_test_question(test_id: int, question_key: str, db: Sessio
         raise HTTPException(status_code=404, detail="Question not found")
     return {"question": practice_test.content[question_key]}
 
-# POST, PUT, DELETE for questions within a practice test would heavily depend on your JSONB manipulation logic
-# and might require using PostgreSQL's JSONB functions through SQLAlchemy's `func` for elaborate JSONB updates.
 

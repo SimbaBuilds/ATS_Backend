@@ -1,8 +1,10 @@
 
 from fastapi import FastAPI, UploadFile, File, HTTPException, Depends, APIRouter
 from sqlalchemy.orm import Session
-from app.models import UserMessage, ChatbotResponse, Feedback
-from database import get_db  # Assuming the database session function exists
+from app.models import UserMessage, Feedback, ChatbotResponse
+
+
+from database.session import get_db  # Assuming the database session function exists
 
 router = APIRouter()
 
