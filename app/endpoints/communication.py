@@ -5,24 +5,21 @@ from datetime import datetime
 import smtplib
 from email.mime.text import MIMEText
 from fastapi import APIRouter
-from app.models import User, Feedback, Notification
+from app.models import Feedback, Notification
+from app.schemas import GetNotificationsResponse, SubmitFeedbackResponse, DismissNotificationResponse, FeedbackModel, GetNotificationHistoryResponse, SendEmailResponse
 
 router = APIRouter()
 
-@router.get("/users")
-async def get_users(db: Session = Depends(get_db)):
-    users = db.query(User).all()
-    return users
 
-@router.get("/notifications")
+@router.get("/notifications", response_model=GetNotificationsResponse)
 async def get_notifications(db: Session = Depends(get_db)):
     notifications = db.query(Notification).filter(Notification.is_dismissed == False).all()
     if not notifications:
         raise HTTPException(status_code=404, detail="No notifications found")
-    return {"notifications": [dict(id=n.id, user_id=n.user_id, message=n.message, is_dismissed=n.is_dismissed, timestamp=n.timestamp) for n in notifications]}
+    return GetNotificationsResponse(notifications=notifications)
 
-@router.post("/feedback")
-async def submit_feedback(feedback: Feedback, db: Session = Depends(get_db)):
+@router.post("/feedback", response_model=SubmitFeedbackResponse)
+async def submit_feedback(feedback: FeedbackModel, db: Session = Depends(get_db)):
     new_feedback = Feedback(
         user_id=feedback.user_id,
         comment=feedback.comment,
@@ -32,40 +29,26 @@ async def submit_feedback(feedback: Feedback, db: Session = Depends(get_db)):
     db.add(new_feedback)
     db.commit()
     db.refresh(new_feedback)
-    return {"status": "Feedback submitted", "feedback_id": new_feedback.id}
+    return SubmitFeedbackResponse(status="Feedback submitted", feedback_id=new_feedback.id)
 
-@router.post("/notifications/dismiss/{id}")
+@router.post("/notifications/dismiss/{id}", response_model=DismissNotificationResponse)
 async def dismiss_notification(id: int, db: Session = Depends(get_db)):
     notification = db.query(Notification).filter(Notification.id == id).first()
-    if notification:
-        notification.is_dismissed = True
-        db.commit()
-        return {"status": "Notification dismissed"}
-    else:
+    if not notification:
         raise HTTPException(status_code=404, detail="Notification not found")
+    notification.is_dismissed = True
+    db.commit()
+    return DismissNotificationResponse(status="Notification dismissed")
 
-@router.get("/notifications/history/{userId}")
+
+@router.get("/notifications/history/{userId}", response_model=GetNotificationHistoryResponse)
 async def get_notification_history(userId: int, db: Session = Depends(get_db)):
     history = db.query(Notification).filter(Notification.user_id == userId).all()
     if not history:
         raise HTTPException(status_code=404, detail="No notifications found for this user")
-    return {
-        "user_id": userId,
-        "history": [dict(id=n.id, user_id=n.user_id, message=n.message, is_dismissed=n.is_dismissed, timestamp=n.timestamp) for n in history]
-    }
+    return GetNotificationHistoryResponse(user_id=userId, history=history)
 
-@router.put("/feedback/{id}")
-async def update_feedback(id: int, updated_feedback: Feedback, db: Session = Depends(get_db)):
-    feedback = db.query(Feedback).filter(Feedback.id == id).first()
-    if feedback:
-        feedback.comment = updated_feedback.comment
-        feedback.rating = updated_feedback.rating
-        db.commit()
-        return {"status": "Feedback updated"}
-    else:
-        raise HTTPException(status_code=404, detail="Feedback not found")
-
-@router.post("/email/send")
+@router.post("/email/send", response_model=SendEmailResponse)
 async def send_email(user_email: str = Body(...), subject: str = Body(...), message: str = Body(...)):
     smtp_server = "your_smtp_server"
     smtp_port = 587
@@ -85,5 +68,5 @@ async def send_email(user_email: str = Body(...), subject: str = Body(...), mess
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to send email: {str(e)}")    
 
-    return {"status": "Email sent"}
+    return SendEmailResponse(status="Email sent")
 

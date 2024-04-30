@@ -13,7 +13,7 @@ from email.mime.text import MIMEText
 
 #probably don't need above in this module
 from fastapi import FastAPI, Depends, UploadFile, File, HTTPException, Body, Path
-from app.endpoints import admin_specific, analytics, answers_and_scoring, auth_user_mgmt, chatbot_manipulation, communication, curriculum_and_study_plans, homework, in_session_chat, practice_tests, progress_tracking, question_mgmt
+from app.endpoints import admin_specific, analytics, answers_and_scoring, auth_user_mgmt, chatbot_actions, communication, curriculum_and_study_plans, homework, in_session_chat, practice_tests, progress_tracking, question_mgmt
 from app.database.session import get_db
 
 
@@ -25,7 +25,7 @@ app = FastAPI()
 app.include_router(admin_specific.router, dependencies=[Depends(get_db)])
 app.include_router(answers_and_scoring.router, dependencies=[Depends(get_db)])
 app.include_router(auth_user_mgmt.router, dependencies=[Depends(get_db)])
-app.include_router(chatbot_manipulation.router, dependencies=[Depends(get_db)])
+app.include_router(chatbot_actions.router, dependencies=[Depends(get_db)])
 app.include_router(communication.router, dependencies=[Depends(get_db)])
 app.include_router(curriculum_and_study_plans.router, dependencies=[Depends(get_db)])
 app.include_router(homework.router, dependencies=[Depends(get_db)])

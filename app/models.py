@@ -10,8 +10,6 @@ from typing import Optional, Dict, List
 from uuid import UUID
 
 
-
-
 # Model for logging administrative actions
 class AdminActionsTable(Base):
     __tablename__ = "admin_actions"

@@ -1,14 +1,13 @@
-
 from fastapi import FastAPI, HTTPException, Depends, APIRouter
 from sqlalchemy.orm import Session
 from app.database.session import get_db
 from app.models import PerformanceAnalytics, UsageAnalytics
+from app.schemas import PerformanceAnalyticsResponse, UsageAnalyticsResponse
 from typing import List, Optional
 
 router = APIRouter()
 
-
-@router.get("/analytics/performance", response_model=PerformanceAnalytics)
+@router.get("/analytics/performance", response_model=PerformanceAnalyticsResponse)
 async def get_performance_analytics(db: Session = Depends(get_db)):
     performance_data = db.query(PerformanceAnalytics).all()
     if not performance_data:
@@ -16,7 +15,7 @@ async def get_performance_analytics(db: Session = Depends(get_db)):
     return performance_data
 
 
-@router.get("/analytics/usage", response_model=UsageAnalytics)
+@router.get("/analytics/usage", response_model=UsageAnalyticsResponse)
 async def get_usage_analytics(db: Session = Depends(get_db)):
     usage_data = db.query(UsageAnalytics).all()
     if not usage_data:

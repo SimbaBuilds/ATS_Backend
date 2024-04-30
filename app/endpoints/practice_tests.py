@@ -5,13 +5,12 @@ from sqlalchemy.orm import Session
 from sqlalchemy.exc import SQLAlchemyError
 from app.database.session import get_db  # Database session setup
 from app.models import PracticeTestsTable, TestAttempt # Using existing SQLAlchemy models
-
+from app.schemas import GetTestResponse, CreateTestResponse, DeleteTestResponse
 
 # define FastAPI router
 router = APIRouter()
 
-# GET /test/{id}: Get details about a specific quiz or test
-@router.get("/test/{id}")
+@router.get("/test/{id}", response_model=GetTestResponse)
 async def get_test(
     id: int = Path(..., description="Unique identifier for the test"),
     db: Session = Depends(get_db)
@@ -22,18 +21,11 @@ async def get_test(
         if not test:
             raise HTTPException(status_code=404, detail="Test not found")
 
-        return {
-            "test": {
-                "id": test.id,
-                "test_name": test.test_name,
-                "content": test.content  # Test content could be questions or other data
-            }
-        }
+        return test
     except SQLAlchemyError:
         raise HTTPException(status_code=500, detail="Database error")
-
-# POST /test: Create a new quiz or test (admin or teacher access)
-@router.post("/test")
+    
+@router.post("/test", response_model=CreateTestResponse)
 async def create_test(
     test_name: str,
     content: dict,
@@ -49,8 +41,8 @@ async def create_test(
     except SQLAlchemyError:
         raise HTTPException(status_code=500, detail="Database error")
 
-# DELETE /test/{id}: Delete a specific test
-@router.delete("/test/{id}")
+
+@router.delete("/test/{id}", response_model=DeleteTestResponse)
 async def delete_test(
     id: int = Path(..., description="Unique identifier for the test"),
     db: Session = Depends(get_db)
