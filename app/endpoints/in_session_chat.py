@@ -2,15 +2,15 @@
 from fastapi import FastAPI, UploadFile, File, HTTPException, Depends, APIRouter, File
 from sqlalchemy.orm import Session
 from app.models import UserMessage, Feedback, ChatbotResponse
-from app.schemas import UserMessageStatusResponse, ChatbotResponseModel, AnalyzeImageResponse, ChatHistoryResponse, FeedbackReceivedResponse
+from app.schemas import UserMessageStatusResponse, ChatbotResponseModel, AnalyzeImageResponse, ChatHistoryResponse, FeedbackReceivedResponse, UserMessageModel, FeedbackModel
 
-from database.session import get_db  # Assuming the database session function exists
+from app.database.session import get_db  # Assuming the database session function exists
 
 router = APIRouter()
 
 # Endpoint for handling user messages and returning chatbot responses
 @router.post("/chat/respond", response_model=ChatbotResponseModel)
-async def chatbot_respond(message: UserMessage, db: Session = Depends(get_db)):
+async def chatbot_respond(message: UserMessageModel, db: Session = Depends(get_db)):
     # Generate a chatbot response
     response_content = f"Received your message: {message.content}"
     chatbot_response = ChatbotResponse(user_id=message.user_id, response=response_content)
@@ -25,7 +25,7 @@ async def analyze_image(file: UploadFile = File(...)):
 
 # POST /chat/message: Accepts user messages for the chatbot and returns status
 @router.post("/chat/message", response_model=UserMessageStatusResponse)
-async def chat_message(message: UserMessage, db: Session = Depends(get_db)):
+async def chat_message(message: UserMessageModel, db: Session = Depends(get_db)):
     db.add(message)
     db.commit()
     return UserMessageStatusResponse(status="Message received", content=message.content)
@@ -41,7 +41,7 @@ async def chat_history(user_id: int, db: Session = Depends(get_db)):
 
 # POST /chat/feedback: Accepts user feedback
 @router.post("/chat/feedback", response_model=FeedbackReceivedResponse)
-async def submit_feedback(feedback: Feedback, db: Session = Depends(get_db)):
+async def submit_feedback(feedback: FeedbackModel, db: Session = Depends(get_db)):
     db.add(feedback)
     db.commit()
     return FeedbackReceivedResponse(status="Feedback received", rating=feedback.rating, comment=feedback.comment)

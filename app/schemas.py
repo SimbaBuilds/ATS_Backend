@@ -11,14 +11,14 @@ from uuid import UUID
 
 
 #ADMIN SPECIFIC RESPONSE MODELS
-#region
+#region 
 # Pydantic model for AdminActions
 class AdminActionResponse(BaseModel):
     id: int
     action_type: str
-    user_id = int
-    details = str
-    timestamp = datetime
+    user_id: int
+    details: str
+    timestamp: datetime
 
 
     class Config:
@@ -72,6 +72,11 @@ class SubmitAnswerResponse(BaseModel):
     class Config:
         orm_mode = True
 
+# Pydantic Schema for submitting answers
+class AnswerSchema(BaseModel):
+    user_id: int
+    answer: str
+    correct: bool
 
 
 class GetAnswersResponse(BaseModel):
@@ -100,7 +105,7 @@ class UpdateAnswerResponse(BaseModel):
 
 #AUTH_USER_MGMT RESPONSE/INPUT MODELS
 #region
-        
+
 class UserResponse(BaseModel):
     id: int
     access_token: Optional[str]
@@ -113,7 +118,7 @@ class UserResponse(BaseModel):
     role: Optional[str]
     status: bool
     profile_picture: Optional[str]
-    additional_info: Optional[dict]  # JSONB is represented as a dictionary in Python
+    additional_info: Optional[dict]
 
     class Config:
         orm_mode = True
@@ -290,8 +295,6 @@ class CreateCurriculumResponse(BaseModel):
     plan_id: int
 
 
-from pydantic import BaseModel
-from typing import Optional
 
 class CurriculumPlanBase(BaseModel):
     name: str
@@ -369,6 +372,7 @@ class ChatbotResponseModel(BaseModel):
 
     class Config:
         orm_mode = True
+
 
 class AnalyzeImageResponse(BaseModel):
     filename: str

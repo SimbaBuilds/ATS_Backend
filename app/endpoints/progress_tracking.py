@@ -7,7 +7,7 @@ from datetime import datetime
 from uuid import UUID 
 from app.models import UserProgress  # Assumed path to your SQLAlchemy model
 from app.database.session import get_db  # Assumed path to your database session
-from app.models import UserProgressListResponse, CreateProgressResponse, UserProgressBase
+from app.schemas import UserProgressListResponse, CreateProgressResponse, UserProgressBase
 
 router = APIRouter()
 

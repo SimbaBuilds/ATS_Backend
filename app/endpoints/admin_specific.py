@@ -4,7 +4,7 @@ from datetime import datetime
 from app.database.session import get_db
 from app.models import User, AdminActionsTable  
 from app.schemas import UserResponse, DeleteUserResponse, RecordAdminActionResponse, AdminActionResponse, UpdateUserResponse
-from pydantic import List
+from typing import List
 
 router = APIRouter()
 

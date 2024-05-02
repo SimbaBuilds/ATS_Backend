@@ -1,5 +1,6 @@
 from sqlalchemy import Column, Integer, String, TIMESTAMP, Boolean, Text, Date, ForeignKey, Float
 from sqlalchemy.dialects.postgresql import JSONB, UUID
+from sqlalchemy_utils import UUIDType
 from sqlalchemy.sql import func
 from app.database.base import Base
 from sqlalchemy.schema import ForeignKey
@@ -230,7 +231,7 @@ class UserProgress(Base):
     quiz_id = Column(Integer, nullable=False, index=True)  # ID of the quiz or test
     score = Column(Integer, nullable=False)  # Score (can be a percentage or total)
     timestamp = Column(TIMESTAMP, server_default=func.now())  # When the progress was recorded
-    session_id = Column(UUID(as_uuid=True), nullable=True, index=True)  # Optional session ID to group related activities
+    session_id = Column(UUIDType, nullable=True, index=True)
 
 
 

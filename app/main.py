@@ -37,15 +37,6 @@ app.include_router(question_mgmt.router, dependencies=[Depends(get_db)])
 #endregion
 
 
-# Connect to PostgreSQL database
-connection = psycopg2.connect(
-    dbname="question_bank_and_practice_tests",
-    user="cameronhightower",
-    password="Wellpleased22!",
-    host="localhost",
-    port="5432"
-)
-
 #FASTAPI DEMO
 #region
 # # This is your existing endpoint (route is to home page)
@@ -70,4 +61,6 @@ connection = psycopg2.connect(
 
 
 # uvicorn app.main:app --reload
+# pip freeze > requirements.txt
+
 
