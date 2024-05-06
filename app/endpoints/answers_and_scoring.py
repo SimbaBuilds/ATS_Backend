@@ -1,87 +1,66 @@
-from fastapi import FastAPI, UploadFile, File, HTTPException, Depends, Body, Path
-from pydantic import BaseModel
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-from jose import JWTError, jwt
-from passlib.context import CryptContext
-from datetime import datetime, timedelta
-from typing import Dict, Optional, List, Any
-import uuid
-import psycopg2
-import json
-from datetime import date, datetime
-import smtplib  
-from email.mime.text import MIMEText
-
-from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
+from fastapi import APIRouter, Depends, HTTPException
+from datetime import datetime
 from app.database.session import get_db
-from app.models import User  # Example model
+from app.models import Answer
+from app.schemas import SubmitAnswerResponse, GetAnswersResponse, UpdateAnswerResponse, AnswerSchema
+from typing import List
 
 router = APIRouter()
 
-@router.get("/users")
-def get_users(db: Session = Depends(get_db)):
-    return db.query(User).all()
+# Admin authentication dependency placeholder
+def admin_auth():
+    # Placeholder for admin authentication logic
+    pass
 
-#region
+#submit_answer
+@router.post("/answers", response_model=SubmitAnswerResponse)  # Use SubmitAnswerResponse for the response
+async def submit_answer(answer_data: AnswerSchema, db: Session = Depends(get_db)):
+    try:
+        # Create a new answer record with SQLAlchemy using the validated Pydantic model data
+        new_answer = Answer(**answer_data.dict())
+        db.add(new_answer)
+        db.commit()
+        db.refresh(new_answer)
 
-# Data model for answer submissions
-class Answer(BaseModel):
-    user_id: int
-    quiz_id: int
-    question_id: int
-    answer: str
-    correct: bool  # True if the answer is correct, False otherwise
-    timestamp: Optional[datetime.datetime] = None
-
-# POST /answers: Submit answers for a quiz or practice test
-@app.post("/answers")
-def submit_answer(answer: Answer):
-    answer.timestamp = datetime.datetime.now()  # Record the submission time
-    with connection.cursor() as cursor:
-        cursor.execute(
-            "INSERT INTO answers (user_id, quiz_id, question_id, answer, correct, timestamp) VALUES (%s, %s, %s, %s, %s, %s) RETURNING id",
-            (answer.user_id, answer.quiz_id, answer.question_id, answer.answer, answer.correct, answer.timestamp)
+        # Prepare and return the response as per the SubmitAnswerResponse schema
+        response_data = SubmitAnswerResponse(
+            id=new_answer.id,
+            timestamp=new_answer.timestamp,
+            status="success" if new_answer.correct else "fail"
         )
-        connection.commit()
-        new_answer_id = cursor.fetchone()[0]
+        return response_data
+    except Exception as e:
+        db.rollback()  # Rollback in case of error
+        raise HTTPException(status_code=500, detail=str(e))  # Return a 500 error with details
     
-    return {"status": "Answer submitted", "answer_id": new_answer_id}
 
-# GET /answers/user/{userId}: Retrieve all submissions by a specific user
-@app.get("/answers/user/{userId}")
-def get_user_answers(userId: int):
-    with connection.cursor() as cursor:
-        cursor.execute("SELECT * FROM answers WHERE user_id = %s", (userId,))
-        user_answers = cursor.fetchall()
-    
-    if not user_answers:
-        raise HTTPException(status_code=404, detail="No answers found for this user")
-    
-    return {"user_id": userId, "answers": user_answers}
+@router.get("/answers/user/{user_id}", response_model=List[GetAnswersResponse])  # Using List of GetAnswersResponse for the output
+async def get_user_answers(user_id: int, db: Session = Depends(get_db)):
+    try:
+        # Retrieve all submissions by a specific user
+        user_answers = db.query(Answer).filter(Answer.user_id == user_id).all()
+        return user_answers
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))  # Return a 500 error with details
 
-# GET /answers/quiz/{quizId}: Retrieve all answers for a specific quiz
-@app.get("/answers/quiz/{quizId}")
-def get_quiz_answers(quizId: int):
-    with connection.cursor() as cursor:
-        cursor.execute("SELECT * FROM answers WHERE quiz_id = %s", (quizId,))
-        quiz_answers = cursor.fetchall()
-    
-    if not quiz_answers:
-        raise HTTPException(status_code=404, detail="No answers found for this quiz")
-    
-    return {"quiz_id": quizId, "answers": quiz_answers}
 
-# GET /answers/{id}: Get details of a specific answer submission
-@app.get("/answers/{id}")
-def get_answer_details(id: str):
-    with connection.cursor() as cursor:
-        cursor.execute("SELECT * FROM answers WHERE id = %s", (id,))
-        answer = cursor.fetchone()
-    
-    if not answer:
+
+@router.put("/answers/{answer_id}", response_model = UpdateAnswerResponse)
+async def update_answer(answer_id: int, update_data: UpdateAnswerResponse, db: Session = Depends(get_db)):
+    # Update a submitted answer with SQLAlchemy
+    existing_answer = db.query(Answer).filter(Answer.id == answer_id).first()
+
+    if not existing_answer:
         raise HTTPException(status_code=404, detail="Answer not found")
-    
-    return {"answer": answer}
 
-#endregion
+    existing_answer.answer = update_data.answer
+    existing_answer.correct = update_data.correct
+
+    db.commit()
+    db.refresh(existing_answer)  # Refresh to get updated data
+
+    return existing_answer
+
+
+    

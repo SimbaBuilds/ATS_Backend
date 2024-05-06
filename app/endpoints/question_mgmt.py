@@ -1,200 +1,63 @@
-from fastapi import FastAPI, UploadFile, File, HTTPException, Depends, Body, Path
-from pydantic import BaseModel
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-from jose import JWTError, jwt
-from passlib.context import CryptContext
-from datetime import datetime, timedelta
-from typing import Dict, Optional, List, Any
-import uuid
-import psycopg2
-import json
-from datetime import date, datetime
-import smtplib  
-from email.mime.text import MIMEText
-
-from fastapi import APIRouter, Depends
+from fastapi import FastAPI, HTTPException, Path, Depends, APIRouter
 from sqlalchemy.orm import Session
-from app.database.session import get_db
-from app.models import User  # Example model
+from app.database.session import get_db  # Assuming databases session setup
+from app.models import QuestionBank, PracticeTestsTable  # Your SQLAlchmey models
+from app.schemas import UpdateQuestionResponse, DeleteQuestionResponse, GetPracticeTestResponse, UpdatePracticeTestResponse, DeletePracticeTestResponse, GetPracticeTestQuestionResponse, GetQBQuestionResponse
 
 router = APIRouter()
-
-@router.get("/users")
-def get_users(db: Session = Depends(get_db)):
-    return db.query(User).all()
-
-
-#region
-
-# Define data models for questions and practice tests
-class Question(BaseModel):
-    id: int
-    topic: str
-    sub_topic: Optional[str]
-    content: Dict[str, Any]  # JSONB field for question content
-
-class PracticeTest(BaseModel):
-    id: int
-    test: str
-    content: Dict[str, Any]  # JSONB field for test content
-
-# CRUD operations for `question_bank_table`
-# GET /questions/{question_id}: Retrieve a specific question from question_bank_table
-@app.get("/questions/{question_id}")
-def get_question(
-    question_id: int = Path(..., description="Unique identifier for the question")
-):
-    with connection.cursor() as cursor:
-        cursor.execute("SELECT * FROM question_bank_table WHERE id = %s", (question_id,))
-        result = cursor.fetchone()
-    
-    if not result:
+@router.get("/questions/{question_id}", response_model=GetQBQuestionResponse)
+async def get_question(question_id: int, db: Session = Depends(get_db)):
+    question = db.query(QuestionBank).filter(QuestionBank.id == question_id).first()
+    if not question:
         raise HTTPException(status_code=404, detail="Question not found")
-    
-    question = {
-        "id": result[0],
-        "topic": result[1],
-        "sub_topic": result[2],
-        "content": result[3]
-    }
-    
-    return {"question": question}
+    return question
 
-# PUT /questions/{question_id}: Update a question in question_bank_table
-@app.put("/questions/{question_id}")
-def update_question(
-    question_id: int,
-    updated_question: Question
-):
-    with connection.cursor() as cursor:
-        cursor.execute(
-            "UPDATE question_bank_table SET topic = %s, sub_topic = %s, content = %s WHERE id = %s",
-            (updated_question.topic, updated_question.sub_topic, updated_question.content, question_id)
-        )
-        connection.commit()
-    
-    return {"message": "Question updated"}
+@router.put("/questions/{question_id}", response_model=UpdateQuestionResponse)
+async def update_question(question_id: int, db: Session = Depends(get_db)):
+    question = db.query(QuestionBank).filter(QuestionBank.id == question_id).first()
+    if not question:
+        raise HTTPException(status_code=404, detail="Question not found")
+    # Update logic here, e.g., question.topic = new_topic
+    db.commit()
+    return UpdateQuestionResponse(message="Question updated", id = question.id)
 
-# DELETE /questions/{question_id}: Delete a question from question_bank_table
-@app.delete("/questions/{question_id}")
-def delete_question(
-    question_id: int
-):
-    with connection.cursor() as cursor:
-        cursor.execute("DELETE FROM question_bank_table WHERE id = %s", (question_id,))
-        connection.commit()
-    
-    return {"message": "Question deleted"}
+@router.delete("/questions/{question_id}", response_model=DeleteQuestionResponse)
+async def delete_question(question_id: int, db: Session = Depends(get_db)):
+    question = db.query(QuestionBank).filter(QuestionBank.id == question_id).first()
+    if not question:
+        raise HTTPException(status_code=404, detail="Question not found")
+    db.delete(question)
+    db.commit()
+    return DeleteQuestionResponse(message="Question deleted")
 
-# CRUD operations for `practice_tests_table`
-# GET /practice_tests/{test_id}: Retrieve a specific practice test by ID
-@app.get("/practice_tests/{test_id}")
-def get_practice_test(
-    test_id: int = Path(..., description="Unique identifier for the practice test")
-):
-    with connection.cursor() as cursor:
-        cursor.execute("SELECT * FROM practice_tests_table WHERE id = %s", (test_id,))
-        result = cursor.fetchone()
-    
-    if not result:
+@router.get("/practice_tests/{test_id}", response_model=GetPracticeTestResponse)
+async def get_practice_test(test_id: int, db: Session = Depends(get_db)):
+    practice_test = db.query(PracticeTestsTable).filter(PracticeTestsTable.id == test_id).first()
+    if not practice_test:
         raise HTTPException(status_code=404, detail="Practice test not found")
-    
-    practice_test = {
-        "id": result[0],
-        "test": result[1],
-        "content": result[2]
-    }
-    
-    return {"practice_test": practice_test}
+    return practice_test
 
-# PUT /practice_tests/{test_id}: Update a specific practice test
-@app.put("/practice_tests/{test_id}")
-def update_practice_test(
-    test_id: int,
-    updated_practice_test: PracticeTest
-):
-    with connection.cursor() as cursor:
-        cursor.execute(
-            "UPDATE practice_tests_table SET test = %s, content = %s WHERE id = %s",
-            (updated_practice_test.test, updated_practice_test.content, test_id)
-        )
-        connection.commit()
-    
-    return {"message": "Practice test updated"}
+@router.put("/practice_tests/{test_id}", response_model=UpdatePracticeTestResponse)
+async def update_practice_test(test_id: int, db: Session = Depends(get_db)):
+    practice_test = db.query(PracticeTestsTable).filter(PracticeTestsTable.id == test_id).first()
+    if not practice_test:
+        raise HTTPException(status_code=404, detail="Practice test not found")
+    # Update logic here, e.g., practice_test.test = new_test
+    db.commit()
+    return UpdatePracticeTestResponse(message="Practice test updated")
 
-# DELETE /practice_tests/{test_id}: Delete a specific practice test
-@app.delete("/practice_tests/{test_id}")
-def delete_practice_test(
-    test_id: int
-):
-    with connection.cursor() as cursor:
-        cursor.execute("DELETE FROM practice_tests_table WHERE id = %s", (test_id,))
-        connection.commit()
-    
-    return {"message": "Practice test deleted"}
+@router.delete("/practice_tests/{test_id}", response_model=DeletePracticeTestResponse)
+async def delete_practice_test(test_id: int, db: Session = Depends(get_db)):
+    practice_test = db.query(PracticeTestsTable).filter(PracticeTestsTable.id == test_id).first()
+    if not practice_test:
+        raise HTTPException(status_code=404, detail="Practice test not found")
+    db.delete(practice_test)
+    db.commit()
+    return DeletePracticeTestResponse(message="Practice test deleted")
 
-# GET /practice_tests/{test_id}/questions/{question_key}: Retrieve a specific question within a practice test
-@app.get("/practice_tests/{test_id}/questions/{question_key}")
-def get_practice_test_question(
-    test_id: int,
-    question_key: str
-):
-    with connection.cursor() as cursor:
-        cursor.execute(
-            "SELECT content->%s FROM practice_tests_table WHERE id = %s",
-            (question_key, test_id)
-        )
-        result = cursor.fetchone()
-    
-    if not result:
+@router.get("/practice_tests/{practice_test}/questions/{question_number}", response_model=GetPracticeTestQuestionResponse)
+async def get_practice_test_question(practice_test: str, question_number: int, db: Session = Depends(get_db)):
+    practice_test_question = db.query(PracticeTestsTable).filter(PracticeTestsTable.practice_test == practice_test and PracticeTestsTable.question_number == question_number).first()
+    if not practice_test or question_number not in practice_test.content:
         raise HTTPException(status_code=404, detail="Question not found")
-    
-    return {"question": result[0]}
-
-# POST /practice_tests/{test_id}/questions: Add a new question to a practice test
-@app.post("/practice_tests/{test_id}/questions")
-def add_practice_test_question(
-    test_id: int,
-    new_question: Dict[str, Any]
-):
-    with connection.cursor() as cursor:
-        cursor.execute(
-            "UPDATE practice_tests_table SET content = jsonb_set(content, %s, %s, true) WHERE id = %s",
-            ("{" + new_question["key"] + "}", json.dumps(new_question["value"]), test_id)
-        )
-        connection.commit()
-    
-    return {"message": "Question added"}
-
-# PUT /practice_tests/{test_id}/questions/{question_key}: Update a specific question in a practice test
-@app.put("/practice_tests/{test_id}/questions/{question_key}")
-def update_practice_test_question(
-    test_id: int,
-    question_key: str,
-    updated_question: Dict[str, Any]
-):
-    with connection.cursor() as cursor:
-        cursor.execute(
-            "UPDATE practice_tests_table SET content = jsonb_set(content, %s, %s, true) WHERE id = %s",
-            ("{" + question_key + "}", json.dumps(updated_question), test_id)
-        )
-        connection.commit()
-    
-    return {"message": "Question updated"}
-
-# DELETE /practice_tests/{test_id}/questions/{question_key}: Delete a specific question from a practice test
-@app.delete("/practice_tests/{test_id}/questions/{question_key}")
-def delete_practice_test_question(
-    test_id: int,
-    question_key: str
-):
-    with connection.cursor() as cursor:
-        cursor.execute(
-            "UPDATE practice_tests_table SET content = content - %s WHERE id = %s",
-            (question_key, test_id)
-        )
-        connection.commit()
-    
-    return {"message": "Question deleted"}
-
-#endregion
+    return practice_test_question

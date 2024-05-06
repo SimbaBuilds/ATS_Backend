@@ -1,130 +1,94 @@
-from fastapi import FastAPI, UploadFile, File, HTTPException, Depends, Body, Path
-from pydantic import BaseModel
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-from jose import JWTError, jwt
-from passlib.context import CryptContext
-from datetime import datetime, timedelta
-from typing import Dict, Optional, List, Any
-import uuid
-import psycopg2
-import json
-from datetime import date, datetime
-import smtplib  
-from email.mime.text import MIMEText
-
-from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
+from fastapi import APIRouter, Depends, HTTPException
+from datetime import datetime
 from app.database.session import get_db
-from app.models import User  # Example model
+from app.models import User, AdminActionsTable  
+from app.schemas import UserResponse, DeleteUserResponse, RecordAdminActionResponse, AdminActionResponse, UpdateUserResponse
+from typing import List
 
 router = APIRouter()
 
-@router.get("/users")
-def get_users(db: Session = Depends(get_db)):
-    return db.query(User).all()
-
-
-
-#region
-# Example admin authentication dependency
+# Admin authentication dependency placeholder
 def admin_auth():
-    # This is a simple placeholder; implement proper authentication logic here
-    # Raise an exception if the user is not authorized
+    # Placeholder for admin authentication logic
     pass
 
-# Data model for user information
-class User(BaseModel):
-    id: int
-    name: str
-    email: str
-    role: str  # User role, e.g., 'user', 'admin'
-    created_at: Optional[datetime.datetime] = None
-
-# Data model for admin actions
-class AdminAction(BaseModel):
-    action_type: str  # Type of action, e.g., 'delete', 'update'
-    user_id: Optional[int]  # User ID associated with the action
-    details: Optional[str] = None  # Additional details or comments
-    timestamp: Optional[datetime.datetime] = None
-
 # GET /admin/users: List all users (admin access)
-@app.get("/admin/users", dependencies=[Depends(admin_auth)])
-def list_users():
-    with connection.cursor() as cursor:
-        cursor.execute("SELECT * FROM users")
-        users = cursor.fetchall()
-    
-    return {
-        "users": [
-            {
-                "id": row[0],
-                "name": row[1],
-                "email": row[2],
-                "role": row[3],
-                "created_at": row[4]
-            }
-            for row in users
-        ]
-    }
+@router.get("/admin/users", dependencies=[Depends(admin_auth)], response_model = List[UserResponse])
+def list_users(db: Session = Depends(get_db)):
+    # Using SQLAlchemy to list all users
+    users = db.query(User).all()
+    return users
 
-# GET /admin/reports: Generate reports on user engagement and performance (admin access)
-@app.get("/admin/reports", dependencies=[Depends(admin_auth)])
-def generate_reports():
-    # This is a basic example; adjust to meet your reporting needs
-    with connection.cursor() as cursor:
-        cursor.execute(
-            """
-            SELECT
-                COUNT(*) AS total_users,
-                AVG(score) AS average_score,
-                MAX(score) AS highest_score,
-                MIN(score) AS lowest_score
-            FROM
-                user_progress
-            """
+#POST record admin action
+@router.post("/admin/actions", dependencies=[Depends(admin_auth)], response_model= RecordAdminActionResponse)
+async def record_admin_action(action_type: str, user_id: int, details: str, db: Session = Depends(get_db)):
+    try:
+        # Create a new admin action record with SQLAlchemy
+        new_action = AdminActionsTable(
+            action_type=action_type,
+            user_id=user_id,
+            details=details,
+            timestamp=datetime.now()
         )
-        report = cursor.fetchone()
-    
-    return {
-        "total_users": report[0],
-        "average_score": report[1],
-        "highest_score": report[2],
-        "lowest_score": report[3]
-    }
+        db.add(new_action)
+        db.commit()
+        db.refresh(new_action)  # Refresh the object to get the generated ID
+        return RecordAdminActionResponse(status="Admin action recorded", action_id=new_action.id)
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
 
-# PUT /admin/users/{userId}: Update details for a specific user (admin access)
-@app.put("/admin/users/{userId}", dependencies=[Depends(admin_auth)])
-def update_user(userId: int, updated_user: User):
-    with connection.cursor() as cursor:
-        cursor.execute(
-            "UPDATE users SET name = %s, email = %s, role = %s WHERE id = %s",
-            (updated_user.name, updated_user.email, updated_user.role, userId)
-        )
-        connection.commit()
-    
-    return {"status": "User details updated"}
+# DELETE /admin/users/{user_id}: Remove a user from the platform (admin access)
+@router.delete("/admin/users/{user_id}", dependencies=[Depends(admin_auth)], response_model=DeleteUserResponse)
+async def delete_user(user_id: int, db: Session = Depends(get_db)):
+    # Delete a user with SQLAlchemy
+    user = db.query(User).filter(User.id == user_id).first()
 
-# POST /admin/actions: Log and manage administrative actions taken on the platform (admin access)
-@app.post("/admin/actions", dependencies=[Depends(admin_auth)])
-def log_admin_action(admin_action: AdminAction):
-    admin_action.timestamp = datetime.datetime.now()  # Record the action timestamp
-    with connection.cursor() as cursor:
-        cursor.execute(
-            "INSERT INTO admin_actions (action_type, user_id, details, timestamp) VALUES (%s, %s, %s, %s) RETURNING id",
-            (admin_action.action_type, admin_action.user_id, admin_action.details, admin_action.timestamp)
-        )
-        connection.commit()
-        new_action_id = cursor.fetchone()[0]
-    
-    return {"status": "Admin action logged", "action_id": new_action_id}
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
 
-# DELETE /admin/users/{userId}: Remove a user from the platform (admin access)
-@app.delete("/admin/users/{userId}", dependencies=[Depends(admin_auth)])
-def delete_user(userId: int):
-    with connection.cursor() as cursor:
-        cursor.execute("DELETE FROM users WHERE id = %s", (userId,))
-        connection.commit()
-    
-    return {"status": "User removed from platform"}
+    db.delete(user)
+    db.commit()
 
-#endregion
+    return {"status": "User removed from platform", "user_id": user_id}
+
+
+
+# GET /admin/action: Get an admin action
+@router.get("/admin/action", dependencies=[Depends(admin_auth)], response_model = AdminActionResponse)
+async def list_admin_actions(action_id: int, db: Session = Depends(get_db)):
+    # List all admin actions with SQLAlchemy
+    admin_action = db.query(AdminActionsTable.id)
+    return admin_action
+
+
+# GET /admin/actions: List all admin actions (admin access)
+@router.get("/admin/actions", dependencies=[Depends(admin_auth)], response_model = List[AdminActionResponse])
+async def list_admin_actions(db: Session = Depends(get_db)):
+    # List all admin actions with SQLAlchemy
+    admin_actions = db.query(AdminActionsTable).all()
+    return admin_actions
+
+
+
+@router.put("/admin/users/{user_id}", dependencies=[Depends(admin_auth)], response_model=UpdateUserResponse)
+async def update_user_role_or_status(user_id: int, new_role: str, new_status: bool, db: Session = Depends(get_db)):
+    # Update a user's role or status with SQLAlchemy
+    user = db.query(User).filter(User.id == user_id).first()
+
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    user.role = new_role
+    user.status = new_status
+    db.commit()
+    db.refresh(user)  # Refresh the object to get the updated data
+
+    # Return response matching the UpdateUserResponse schema
+    return UpdateUserResponse(
+        status="User role and status updated",
+        user_id=user.id,
+        user_role=user.role,
+        user_status=user.status
+    )
