@@ -17,7 +17,7 @@ async def get_homework(userId: int, db: Session = Depends(get_db)):
         if not results:
             raise HTTPException(status_code=404, detail="No homework assignments found")
         
-        return HomeworkAssignmentsResponse(homework=results)
+        return results
     except SQLAlchemyError as e:
         raise HTTPException(status_code=500, detail=str(e))
 

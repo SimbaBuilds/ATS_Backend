@@ -46,7 +46,6 @@ async def get_user_answers(user_id: int, db: Session = Depends(get_db)):
 
 
 
-
 @router.put("/answers/{answer_id}", response_model = UpdateAnswerResponse)
 async def update_answer(answer_id: int, update_data: UpdateAnswerResponse, db: Session = Depends(get_db)):
     # Update a submitted answer with SQLAlchemy

@@ -37,7 +37,7 @@ async def chat_history(user_id: int, db: Session = Depends(get_db)):
     chat_history = db.query(UserMessage).filter(UserMessage.user_id == user_id).all()
     if not chat_history:
         raise HTTPException(status_code=404, detail="Chat history not found")
-    return ChatHistoryResponse(history=chat_history)
+    return chat_history
 
 # POST /chat/feedback: Accepts user feedback
 @router.post("/chat/feedback", response_model=FeedbackReceivedResponse)

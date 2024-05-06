@@ -16,7 +16,7 @@ async def get_notifications(db: Session = Depends(get_db)):
     notifications = db.query(Notification).filter(Notification.is_dismissed == False).all()
     if not notifications:
         raise HTTPException(status_code=404, detail="No notifications found")
-    return GetNotificationsResponse(notifications=notifications)
+    return notifications
 
 @router.post("/feedback", response_model=SubmitFeedbackResponse)
 async def submit_feedback(feedback: FeedbackModel, db: Session = Depends(get_db)):

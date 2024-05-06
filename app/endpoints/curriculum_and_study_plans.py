@@ -8,21 +8,14 @@ from typing import List
 
 router = APIRouter()
 
-@router.get("/users", response_model=GetAllUsersResponse)
-async def get_users(db: Session = Depends(get_db)):
-    try:
-        users = db.query(User).all()
-        return GetAllUsersResponse(users=users)
-    except SQLAlchemyError as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
-@router.get("/curriculum/{userId}", response_model=GetCurriculumResponse)
+@router.get("/curriculum/{userId}", response_model=CurriculumPlanModel)
 async def get_curriculum(userId: int, db: Session = Depends(get_db)):
     try:
         plans = db.query(CurriculumPlan).filter_by(user_id=userId).all()
         if not plans:
             raise HTTPException(status_code=404, detail="No curriculum plans found for this user")
-        return GetCurriculumResponse(user_id=userId, curriculum_plans=plans)
+        return CurriculumPlanModel
     except SQLAlchemyError as e:
         raise HTTPException(status_code=500, detail=str(e))
 

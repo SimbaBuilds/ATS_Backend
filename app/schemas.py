@@ -459,25 +459,56 @@ class QuestionBase(BaseModel):
     class Config:
         orm_mode = True
 
-class GetQuestionResponse(BaseModel):
-    question: QuestionBase
+# Pydantic model for QuestionBank
+class GetQBQuestionResponse(BaseModel):
+    id: int
+    topic: Optional[str]
+    sub_topic: Optional[str]
+    question_number_in_subtopic: Optional[int]
+    figure_description: Optional[str]
+    image: Optional[str]
+    equation: Optional[str]
+    svg: Optional[str]
+    question_content: Optional[str]
+    answer_explanation: Optional[str]
+    correct_answer: Optional[str]
+    tabular_data: Optional[Dict]
+    choices: Optional[Dict]
+
+    class Config:
+        orm_mode = True
 
 class UpdateQuestionResponse(BaseModel):
+    id: int
     message: str
 
 class DeleteQuestionResponse(BaseModel):
     message: str
 
-class PracticeTestBase(BaseModel):
+# Pydantic model for PracticeTestsTable
+class GetPracticeTestResponse(BaseModel):
     id: int
-    test: str
-    content: dict  # Assuming content is a dictionary
+    practice_test: str
+    type: Optional[str]
+    domain: Optional[str]
+    skill: Optional[str]
+    topic: Optional[str]
+    sub_topic: Optional[str]
+    question_number: Optional[int]
+    difficulty: Optional[str]
+    figure_description: Optional[str]
+    image: Optional[str]
+    equation: Optional[str]
+    svg: Optional[str]
+    tabular_data: Optional[Dict]
+    question_content: Optional[str]
+    answer_explanation: Optional[str]
+    correct_answer: Optional[str]
+    choices: Optional[Dict]
 
     class Config:
         orm_mode = True
 
-class GetPracticeTestResponse(BaseModel):
-    practice_test: PracticeTestBase
 
 class UpdatePracticeTestResponse(BaseModel):
     message: str
@@ -575,49 +606,10 @@ class PerformanceAnalyticsResponse(BaseModel):
         orm_mode = True
 
 
-# Pydantic model for PracticeTestsTable
-class PracticeTestsResponse(BaseModel):
-    id: int
-    practice_test: str
-    type: Optional[str]
-    domain: Optional[str]
-    skill: Optional[str]
-    topic: Optional[str]
-    sub_topic: Optional[str]
-    question_number: Optional[int]
-    difficulty: Optional[str]
-    figure_description: Optional[str]
-    image: Optional[str]
-    equation: Optional[str]
-    svg: Optional[str]
-    tabular_data: Optional[Dict]
-    question_content: Optional[str]
-    answer_explanation: Optional[str]
-    correct_answer: Optional[str]
-    choices: Optional[Dict]
-
-    class Config:
-        orm_mode = True
 
 
-# Pydantic model for QuestionBank
-class QuestionBankResponse(BaseModel):
-    id: int
-    topic: Optional[str]
-    sub_topic: Optional[str]
-    question_number_in_subtopic: Optional[int]
-    figure_description: Optional[str]
-    image: Optional[str]
-    equation: Optional[str]
-    svg: Optional[str]
-    question_content: Optional[str]
-    answer_explanation: Optional[str]
-    correct_answer: Optional[str]
-    tabular_data: Optional[Dict]
-    choices: Optional[Dict]
 
-    class Config:
-        orm_mode = True
+
 
 
 

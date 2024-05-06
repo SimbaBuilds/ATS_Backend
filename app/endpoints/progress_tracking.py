@@ -17,14 +17,14 @@ async def get_user_progress(userId: int, db: Session = Depends(get_db)):
     progress_data = db.query(UserProgress).filter(UserProgress.user_id == userId).order_by(UserProgress.timestamp.asc()).all()
     if not progress_data:
         raise HTTPException(status_code=404, detail="No progress data found for this user")
-    return UserProgressListResponse(progress=progress_data)
+    return progress_data
 
 @router.get("/progress/session/{sessionId}", response_model=UserProgressListResponse)
 async def get_session_progress(sessionId: UUID, db: Session = Depends(get_db)):
     session_progress = db.query(UserProgress).filter(UserProgress.session_id == sessionId).all()
     if not session_progress:
         raise HTTPException(status_code=404, detail="No progress data found for this session")
-    return UserProgressListResponse(progress=session_progress)
+    return session_progress
 
 @router.post("/progress", response_model=CreateProgressResponse)
 async def record_progress(progress: UserProgressBase, db: Session = Depends(get_db)):
