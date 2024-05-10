@@ -65,11 +65,6 @@ class Message(Base):
     # Relationship to conversation
     conversation = relationship("Conversation", back_populates="messages")
 
-# Example engine and session creation (replace 'sqlite:///example.db' with your actual database URL)
-engine = create_engine('sqlite:///example.db')
-Base.metadata.create_all(engine)
-Session = sessionmaker(bind=engine)
-
 
 class ChatbotResponse(Base):
     __tablename__ = "chatbot_responses"
