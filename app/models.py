@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, TIMESTAMP, Boolean, Text, Date, ForeignKey, Float
+from sqlalchemy import Column, Integer, String, TIMESTAMP, Boolean, Text, Date, ForeignKey, Float, JSON
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy_utils import UUIDType
 from sqlalchemy.sql import func
@@ -9,6 +9,7 @@ from pydantic import BaseModel, EmailStr
 from datetime import datetime, date
 from typing import Optional, Dict, List
 from uuid import UUID
+from sqlalchemy.orm import relationship
 
 
 # Model for logging administrative actions
@@ -33,6 +34,41 @@ class Answer(Base):
     correct = Column(Boolean, nullable=False)  # Indicates if the answer is correct
     timestamp = Column(TIMESTAMP, server_default=func.now(), onupdate=func.now(), nullable=False)  # Submission time
 
+class ChatHistory(Base):
+    __tablename__ = "chat_history"
+
+    id = Column(Integer, primary_key=True, autoincrement=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)  # Foreign key to the "users" table
+    messages = Column(JSON, nullable=False)  # Stores a list of message objects
+    session_start = Column(TIMESTAMP, server_default=func.now())  # Timestamp when the chat session started
+
+
+class Conversation(Base):
+    __tablename__ = 'conversations'
+
+    id = Column(Integer, primary_key=True)
+    title = Column(String(255), nullable=False)  # You might want a title or a similar descriptor
+
+    # Relationship to messages
+    messages = relationship("Message", back_populates="conversation")
+
+
+class Message(Base):
+    __tablename__ = 'messages'
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, nullable=False)
+    content = Column(Text, nullable=False)
+    role = Column(String(50), nullable=False)  # 'user' or 'assistant'
+    conversation_id = Column(Integer, ForeignKey('conversations.id'))
+
+    # Relationship to conversation
+    conversation = relationship("Conversation", back_populates="messages")
+
+# Example engine and session creation (replace 'sqlite:///example.db' with your actual database URL)
+engine = create_engine('sqlite:///example.db')
+Base.metadata.create_all(engine)
+Session = sessionmaker(bind=engine)
 
 
 class ChatbotResponse(Base):
@@ -271,3 +307,14 @@ class User(Base):
     profile_picture = Column(String(255), nullable=True)  # Reference to the profile picture
     additional_info = Column(JSONB, nullable=True)  # Store additional user-related data
 
+
+
+
+# MODEL TO DB
+# from sqlalchemy import create_engine
+# from app.database.base import Base
+# from app.models import *  # This imports all models
+
+# DATABASE_URL = "postgresql://cameronhightower:Wellpleased22!@localhost:5432/automated_tutoring_service"
+# engine = create_engine(DATABASE_URL, echo=True)  # Set echo to True to log SQL queries
+# Base.metadata.create_all(engine)

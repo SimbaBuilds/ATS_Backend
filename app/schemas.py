@@ -366,6 +366,33 @@ class DeleteHomeworkResponse(BaseModel):
 
 #IN-SESSION CHAT
 #region
+        
+class MessageSchema(BaseModel):
+    user_id: int
+    content: str
+    role: str
+
+    class Config:
+        orm_mode = True  # This enables the model to handle ORM objects
+
+class ConversationSchema(BaseModel):
+    id: int
+    title: str
+    messages: list[MessageSchema] = []
+
+    class Config:
+        orm_mode = True
+
+    
+class ChatHistorySchema(BaseModel):
+    id: int
+    user_id: int
+    messages: List[Dict[str, Any]]  # Assuming messages are stored as a list of dictionaries
+    session_start: datetime
+
+    class Config:
+        orm_mode = True
+
 class ChatbotResponseModel(BaseModel):
     user_id: int
     response: str
@@ -382,16 +409,16 @@ class UserMessageStatusResponse(BaseModel):
     status: str
     content: str
 
-class UserMessageModel(BaseModel):
+class UserMessageSchema(BaseModel):
     user_id: int
-    content: str
+    request: str
     timestamp: datetime
 
     class Config:
         orm_mode = True
 
 class ChatHistoryResponse(BaseModel):
-    history: List[UserMessageModel]
+    history: List[UserMessageSchema]
 
 class FeedbackReceivedResponse(BaseModel):
     status: str
