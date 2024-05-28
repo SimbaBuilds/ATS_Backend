@@ -43,27 +43,28 @@ class ChatHistory(Base):
     session_start = Column(TIMESTAMP, server_default=func.now())  # Timestamp when the chat session started
 
 
+
 class Conversation(Base):
     __tablename__ = 'conversations'
 
-    id = Column(Integer, primary_key=True)
-    title = Column(String(255), nullable=False)  # You might want a title or a similar descriptor
-
-    # Relationship to messages
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String, index=True)
     messages = relationship("Message", back_populates="conversation")
+
 
 
 class Message(Base):
     __tablename__ = 'messages'
 
-    id = Column(Integer, primary_key=True)
-    user_id = Column(Integer, nullable=False)
-    content = Column(Text, nullable=False)
-    role = Column(String(50), nullable=False)  # 'user' or 'assistant'
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, index=True)
+    content = Column(String)
+    role = Column(String)
+    timestamp = Column(TIMESTAMP, server_default=func.now())  # Automatically set the current timestamp
     conversation_id = Column(Integer, ForeignKey('conversations.id'))
 
-    # Relationship to conversation
     conversation = relationship("Conversation", back_populates="messages")
+
 
 
 class ChatbotResponse(Base):

@@ -393,7 +393,7 @@ class ChatHistorySchema(BaseModel):
     class Config:
         orm_mode = True
 
-class ChatbotResponseModel(BaseModel):
+class ChatbotResponseSchema(BaseModel):
     user_id: int
     response: str
 
@@ -411,8 +411,8 @@ class UserMessageStatusResponse(BaseModel):
 
 class UserMessageSchema(BaseModel):
     user_id: int
-    request: str
-    timestamp: datetime
+    content: str
+    role: str
 
     class Config:
         orm_mode = True

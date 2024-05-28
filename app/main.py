@@ -17,7 +17,19 @@ from app.endpoints import admin_specific, analytics, answers_and_scoring, auth_u
 from app.database.session import get_db
 
 
+
+
 app = FastAPI()
+
+#FASTAPI
+from fastapi.middleware.cors import CORSMiddleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Specify domains if needed
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 #include endpoints via router
