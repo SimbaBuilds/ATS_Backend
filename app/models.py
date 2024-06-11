@@ -10,6 +10,9 @@ from datetime import datetime, date
 from typing import Optional, Dict, List
 from uuid import UUID
 from sqlalchemy.orm import relationship
+from sqlalchemy.dialects.postgresql import UUID
+import uuid
+
 
 
 # Model for logging administrative actions
@@ -47,9 +50,15 @@ class ChatHistory(Base):
 class Conversation(Base):
     __tablename__ = 'conversations'
 
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
+    user_id = Column(UUID(as_uuid=True), ForeignKey('users.id'), nullable=False)
+    conversation_number = Column(Integer, nullable=False)
+    timestamp = Column(TIMESTAMP, server_default=func.now())  # Automatically set the current timestamp
+
     title = Column(String, index=True)
     messages = relationship("Message", back_populates="conversation")
+
+    # Add any additional fields or relationships as necessary
 
 
 
@@ -57,11 +66,11 @@ class Message(Base):
     __tablename__ = 'messages'
 
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, index=True)
+    user_id = Column(UUID(as_uuid=True), ForeignKey('users.id'), nullable=False)
     content = Column(String)
     role = Column(String)
     timestamp = Column(TIMESTAMP, server_default=func.now())  # Automatically set the current timestamp
-    conversation_id = Column(Integer, ForeignKey('conversations.id'))
+    conversation_id = Column(UUID, ForeignKey('conversations.id'))
 
     conversation = relationship("Conversation", back_populates="messages")
 
@@ -289,7 +298,7 @@ class UserSettings(Base):
 class User(Base):
     __tablename__ = "users"
 
-    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
     access_token = Column(String(255), nullable=True)  
     token_type = Column(String(255), nullable=True)  
     username = Column(String(255), unique=True, nullable=False)

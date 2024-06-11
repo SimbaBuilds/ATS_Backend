@@ -394,7 +394,7 @@ class ChatHistorySchema(BaseModel):
         orm_mode = True
 
 class ChatbotResponseSchema(BaseModel):
-    user_id: int
+    user_id: UUID
     response: str
 
     class Config:
