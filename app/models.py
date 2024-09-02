@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, TIMESTAMP, Boolean, Text, Date, ForeignKey, Float, JSON
+from sqlalchemy import Column, Integer, String, TIMESTAMP, Boolean, Text, Date, ForeignKey, Float, JSON, UniqueConstraint
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy_utils import UUIDType
 from sqlalchemy.sql import func
@@ -313,7 +313,23 @@ class User(Base):
     additional_info = Column(JSONB, nullable=True)  # Store additional user-related data
 
 
+class QuestionType(Base):
+    __tablename__ = 'question_types'
+    question_type_id = Column(Integer, primary_key=True, autoincrement=True)
+    question_type_name = Column(String, nullable=False, unique=True)
+    progress = relationship('UserQuestionProgress', back_populates='question_type')
 
+class UserQuestionProgress(Base):
+    __tablename__ = 'user_question_progress'
+    user_id = Column(Integer, ForeignKey('users.user_id'), primary_key=True)
+    question_type_id = Column(Integer, ForeignKey('question_types.question_type_id'), primary_key=True)
+    progress = Column(Integer, nullable=False, default=0)
+    user = relationship('User', back_populates='progress')
+    question_type = relationship('QuestionType', back_populates='progress')
+    
+    __table_args__ = (
+        UniqueConstraint('user_id', 'question_type_id', name='uix_user_question_type'),
+    )
 
 # MODEL TO DB
 # from sqlalchemy import create_engine

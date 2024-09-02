@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from app.models import UserMessage, Feedback, ChatbotResponse, Conversation, Message
 from app.schemas import UserMessageStatusResponse, ChatbotResponseSchema, AnalyzeImageResponse, ChatHistoryResponse, FeedbackReceivedResponse, UserMessageSchema, FeedbackModel, ChatHistorySchema, MessageSchema, ConversationSchema
 from app.database.session import get_db  # Assuming the database session function exists
-from app.utils.chat_utils import generate_new_response
+from app.utils.chat_utils import query_agent
 from uuid import uuid4
 from uuid import UUID
 import uuid
@@ -51,7 +51,7 @@ async def update_conversation(conversation_id: str, user_id: UUID = Form(...), c
     if not conversation_history:
         conversation_history.append({"role": "system", "content": "You are a helpful digital SAT tutor."})
 
-    chatbot_response_text = generate_new_response(conversation_history)
+    chatbot_response_text = query_agent(conversation_history)
     print(f"Chatbot Response: {chatbot_response_text}")
 
     # Append chatbot response to the conversation history
