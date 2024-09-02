@@ -49,9 +49,9 @@ async def update_conversation(conversation_id: str, user_id: UUID = Form(...), c
 
     # Add a default system message if the conversation history is empty
     if not conversation_history:
-        conversation_history.append({"role": "system", "content": "You are a helpful digital SAT tutor."})
+        conversation_history.append({"role": "system", "content": "You are a digital SAT tutor."})
 
-    chatbot_response_text = query_agent(conversation_history)
+    chatbot_response_text = query_agent(conversation_history, user_id)
     print(f"Chatbot Response: {chatbot_response_text}")
 
     # Append chatbot response to the conversation history

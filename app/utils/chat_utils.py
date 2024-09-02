@@ -34,7 +34,7 @@ potential_topic_confusion = """
 """
 
 prompt = f"""
-You are an expert SAT tutor.
+You are an expert SAT tutor who is leading a tutoring session.
 You operate in a loop of 4 phases: Thought, Action, PAUSE, and Observation.
 At the end of the loop you will output an Answer.
 1. Thought: Use Thought to describe which action to take
@@ -57,8 +57,8 @@ The first 3 actions require a tool/function call.  The fourth does not.
 Example query:
 
 Conversation State: The student is practicing command of quantitative evidence from a graph while in a reading/writing session.
-Thought: I should pull a question from the question bank testing command of quantitative evidence from a graph using retrieve_qb_question
-Action: retrieve_qb_question: We need a question for practicing command of quantiative evidence from a graph
+Thought: I should pull a question from the reading and writing section testing command of quantitative evidence from a graph using retrieve_qb_question
+Action: retrieve_qb_question: We need a question from the reading and writing topic that tests command of quantiative evidence from a graph
 PAUSE
 
 You will then receive the result of your action.
@@ -81,8 +81,7 @@ question_descriptions = [
     2. Center shape and spread: Standard Deviation
     3. Center shape and spread: Measures of Center, skewed versus normal
     4. Data Inference
-    5. Missing Number Given Averages Problem : given the average of a set of numbers and the average of a subset of those numbers, find the average of the remaining numbers or find the missing number
-    6. Mean, median, mode, and range""",
+    5. Mean, median, mode, and range""",
     
     """Quadratics:
     1. Discriminant: use the discriminant to determine the number of real roots of a quadratic equation
@@ -104,7 +103,7 @@ question_descriptions = [
     9. Equation of a Circle
     10. Distance Formula
     11. Midpoint Formula
-    12. Challenge Problems: this is a special set of questions that each include multiple geometry concepts and are designed to challenge the student""",
+    12. Challenge Problems: this is a special set of questions that each include multiple geometry and trigonometry concepts and are designed to challenge the student""",
     
     """Linear Equations:
     1. Linear Relationship Word Problems
@@ -141,7 +140,7 @@ question_descriptions = [
     4. Polynomial Long Division
     5. Completing the Square
     6. Rational Roots Theorem
-    7. Missing Number Given Average,
+    7. Missing Number Given Averages Problem : given the average of a set of numbers and the average of a subset of those numbers, find the average of the remaining numbers or find the missing number
     8. Complex Numerical Reasoning/Challenge Problems, this is a special set of questions designed to challenge the student -- these are often found at the end of the harder second section of the SAT""",
 
     
@@ -178,19 +177,130 @@ question_descriptions = [
     5. Command of Quantitative Evidence given a table
     6. Cross text Connections: invovles understanding how two texts relate to each other
     7. Form, Structure, and Sense: related to subject verb agreement and pronoun antecedent agreement
-    8. Rhetorical Synthesis: involes adding a sentence to a paragprah to bolster or support the main idea or argument
-    9. Text Structure and Purpose: asks the student to identify the purpose of a sentence within a paragraph
-    10. Transitions: tests knowledge of transitional words and phrases like however, nevertheless, consequently, etc...
-    11. Words in Context: tests knowledge of vocabulary in context"""
+    8. Inference Questions: invovles making inferences from a text
+    9. Rhetorical Synthesis: involes adding a sentence to a paragprah to bolster or support the main idea or argument
+    10. Text Structure and Purpose: asks the student to identify the purpose of a sentence within a paragraph
+    11. Transitions: tests knowledge of transitional words and phrases like however, nevertheless, consequently, etc...
+    12. Words in Context: tests knowledge of vocabulary in context"""
 ]
+
+question_mapping = {
+    1: {  # Data Analysis
+        1: "frequency_tables",
+        2: "standard_deviation",
+        3: "moc_from_figure",
+        4: "data_inference",
+        5: "mmmr"
+    },
+    2: {  # Quadratics
+        1: "discriminant",
+        2: "quadratic_formula",
+        3: "factoring",
+        4: "remainder_theorem",
+        5: "vertex_from_different_forms",
+        6: "vietas"
+    },
+    3: {  # Geometry
+        1: "triangle_sum_theorem",
+        2: "special_triangles",
+        3: "area_volume",
+        4: "transversals",
+        5: "pythag",
+        6: "triangle_congruence",
+        7: "arcs_and_central_angles",
+        8: "similar_triangles",
+        9: "circle_equations",
+        10: "distance_formula",
+        11: "midpoint",
+        12: "geometry_trig_challenge"
+    },
+    4: {  # Linear Equations
+        1: "word_problems",
+        2: "interpretation",
+        3: "eq_from_two_points_f_n",
+        4: "parallel_and_perpendicular_slopes"
+    },
+    5: {  # Algebra
+        1: "one_step",
+        2: "multi_step",
+        3: "algebraic_inequalities",
+        4: "algebra_w_exponents",
+        5: "abs_value_algebra",
+        6: "basic_word_problems",
+        7: "proportional_expressions"
+    },
+    6: {  # Terminology
+        1: "terminology"
+    },
+    7: {  # Arithmetic
+        1: "fractions",
+        2: "combine_like_terms",
+        3: "exponent_properties",
+        4: "percents",
+        5: "box_foil",
+        6: "function_notation",
+        7: "evaluation",
+        8: "percent_increase_decrease"
+    },
+    8: {  # Advanced Arithmetic
+        1: "expanding_radicals",
+        2: "dimensional_analysis",
+        3: "imaginary_numbers",
+        4: "poly_long_div",
+        5: "completing_the_square",
+        6: "rational_roots_th",
+        7: "missing_average",
+        8: "advanced_quantitative_reasoning"
+    },
+    9: {  # Exponential Equations
+        1: "identification",
+        2: "exponential_equations"
+    },
+    10: {  # Systems
+        1: "desmos_practice",
+        2: "solutions_and_intersection",
+        3: "systems_word_problems"
+    },
+    11: {  # Trigonometry
+        1: "finding_sides",
+        2: "degree_radian_conversions"
+    },
+    12: {  # Proportional Reasoning
+        1: "proportional_reasoning"
+    },
+    13: {  # Probability
+        1: "probability_from_a_table"
+    },
+    14: {  # Nonlinear Functions
+        1: "high_degree_polynomials"
+    },
+    15: {  # Intercepts
+        1: "intercepts"
+
+    },
+    16: {  # Reading and Writing
+        1: "boundaries",
+        2: "central_ideas_and_details_questions",
+        3: "command_of_textual_evidence_questions",
+        4: "cqe_bar_graph_questions",
+        5: "cqe_table_questions",
+        6: "cross_text_connections_questions",
+        7: "form_structure_sense_questions",
+        8:  "inference_questions",
+        9:  "rhetorical_synthesis_questions",
+        10: "text_structure_and_purpose_questions",
+        11: "transitions_questions",
+        12: "words_in context_questions"
+    },
+}
 
 question_topics = """
 
-Note: If the student has mastered most skills, the complex numerical reasoning problems under advanced arithmetic and the challenge problems under geometry are good options.
+Note: If the student has mastered most skills, the complex numerical reasoning problems under advanced arithmetic and the geometry/trigonometry challenge problems under geometry are good options.
 
 1. Data Analysis: Frequency Tables, Data Inference, Missing Number Given Average, Measures of Center, Measures of Spread
 2. Quadratics: Discriminant, Quadratic Formula, Factoring, Remainder Theorem, Vertex from factored form, standard form, and vertex form, Vieta's Formula (Sum of Roots)
-3. Geometry: Triangle Sum Theorem, Special Triangles, Area and Volume, Parallel lines and a transversal, Pythagorean Theorem, Congruence Proofs (SAS, ASA, SSS, AAS), Arcs and Central Angles, Similar Triangles, Equation of a Circle, Distance Formula, Midpoint Formula, Challenge Problems
+3. Geometry: Triangle Sum Theorem, Special Triangles, Area and Volume, Parallel lines and a transversal, Pythagorean Theorem, Congruence Proofs (SAS, ASA, SSS, AAS), Arcs and Central Angles, Similar Triangles, Equation of a Circle, Distance Formula, Midpoint Formula, Geometry and Trigonometry Challenge Problems
 4. Linear Equations: Linear Relationship Word Problems, Interpreting Linear Equations, Equation from two points (function notation), Slopes of Parallel/Perpendicular Lines
 5. Algebra: Solve one step equation, Solve multi step equation, Algebraic Inequalities, Proportional expressions
 6. Terminology: Math Vocabulary such as integer, rational number, irrational number, prime number, composite number, factor, multiple, etc.
@@ -263,7 +373,7 @@ def determine_question_type(need_description: str, question_topics: dict) -> lis
     return topic_number, question_typenum_within_topic
 
 #pass in the need description and user_id
-def retrieve_qb_question(need_description:str, user_id: str):
+def retrieve_qb_question(need_description:str, user_id: int):
     
 
     topic_number, question_typenum_within_topic = determine_question_type(need_description, question_topics)
@@ -273,13 +383,14 @@ def retrieve_qb_question(need_description:str, user_id: str):
         return "Other"
 
 
-    # logic for mapping LLM response to actual question type names in DB 
-    
+    # logic for mapping LLM response to actual question type names in DB
+    question_type = question_mapping[int(topic_number)][question_typenum_within_topic]
+
 
     #avoid repeat questions: logic for determining which question number the user on for that type by querying DB
 
 
-    #logic for mapping LLM response to actual question type names in DB, logic for querying db
+    #query db for question
 
 
     question = QuestionBank().get_random_question()
@@ -315,9 +426,10 @@ known_actions = {
 
 action_re = re.compile('^Action: (\w+): (.*)$')   # python regular expression to selection action
 
-def query_agent(messages, max_turns=3):
+def query_agent(messages, user_id, max_turns=3):
     i = 0
     bot = Agent()
+    print("agent created")
     next_prompt = messages
     while i < max_turns:
         i += 1
@@ -329,16 +441,17 @@ def query_agent(messages, max_turns=3):
             if action_re.match(a)
         ]
         if actions:
+            print("action found")
             # There is an action to run
             action, action_input = actions[0].groups()
             if action not in known_actions:
-                raise Exception("Unknown action: {}: {}".format(action, action_input))
-            print(" -- running {} {}".format(action, action_input))
-            observation = known_actions[action](action_input)
+                raise Exception("Unknown action: {}: {}".format(action, action_input, user_id))
+            print(" -- running {} {}".format(action, action_input, user_id))
+            observation = known_actions[action](action_input, user_id)
             print("Observation:", observation)
             next_prompt = "Observation: {}".format(observation)
         else:
-            return
+            return result
 
 
 
