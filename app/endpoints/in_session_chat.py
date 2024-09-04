@@ -1,7 +1,7 @@
 
 from fastapi import FastAPI, UploadFile, File, HTTPException, Depends, APIRouter, Form
 from sqlalchemy.orm import Session
-from app.models import UserMessage, Feedback, ChatbotResponse, Conversation, Message
+from app.models import UserMessage, Feedback, Conversation, Message
 from app.schemas import UserMessageStatusResponse, ChatbotResponseSchema, AnalyzeImageResponse, ChatHistoryResponse, FeedbackReceivedResponse, UserMessageSchema, FeedbackModel, ChatHistorySchema, MessageSchema, ConversationSchema
 from app.database.session import get_db  # Assuming the database session function exists
 from app.utils.chat_utils import query_agent
@@ -42,14 +42,15 @@ async def update_conversation(conversation_id: str, user_id: UUID = Form(...), c
     print("message added")
 
     # Transform conversation messages to the desired format
+    #TYPE "TEXT" HARDCODED
     conversation_history = [
-        {"role": msg.role, "content": msg.content}
+        {"role": msg.role, "content": msg.content, "type": "text"}
         for msg in conversation.messages
     ]
 
     # Add a default system message if the conversation history is empty
     if not conversation_history:
-        conversation_history.append({"role": "system", "content": "You are a digital SAT tutor."})
+        conversation_history.append({"role": "system", "content": "You are a digital SAT tutor.", "type": "text"})
 
     chatbot_response_text = query_agent(conversation_history, user_id)
     print(f"Chatbot Response: {chatbot_response_text}")

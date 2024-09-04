@@ -2,24 +2,46 @@ import openai
 from openai import OpenAI
 
 openai.api_key = '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'
-from app.models import QuestionBank
-from app.models import PracticeTestsTable
 from duckduckgo_search import DDGS
 import re
+from sqlalchemy.orm import Session
+from app.models import UserQuestionProgress, QuestionType, QuestionBankQuestion, PracticeTestQuestion
+from sqlalchemy.dialects.postgresql import UUID
+from fastapi import FastAPI, UploadFile, File, HTTPException, Depends, APIRouter, Form
+from app.database.session import get_db  # Assuming the database session function exists
+from app.utils.db_rtrvl_utils import get_user_progress_on_question_type, get_question_by_sub_topic_and_number, increment_user_progress
+
+
 
 client = OpenAI()
 
 class Agent:
-    def __init__(self, system=""):
-        self.system = system
+    def __init__(self, system=None):
         self.messages = []
-        if self.system:
-            self.messages.append({"role": "system", "content": system})
+
+        if isinstance(system, list):
+            # Initialize with a list of dictionaries
+            self.messages = system
+        elif isinstance(system, str) and system:
+            # Initialize with a system message string
+            self.messages.append({
+                "role": "system", 
+                "content": system,  # Content is a plain string
+                "type": "text"      # Assuming "type" is required
+            })
 
     def __call__(self, message):
-        self.messages.append({"role": "user", "content": message})
+        self.messages.append({
+            "role": "user", 
+            "content": message,  # Content is a plain string
+            "type": "text"       # Assuming "type" is required
+        })
         result = self.execute()
-        self.messages.append({"role": "assistant", "content": result})
+        self.messages.append({
+            "role": "assistant", 
+            "content": result,  # Content is a plain string
+            "type": "text"      # Assuming "type" is required
+        })
         return result
 
     def execute(self):
@@ -372,11 +394,11 @@ def determine_question_type(need_description: str, question_topics: dict) -> lis
     
     return topic_number, question_typenum_within_topic
 
-#pass in the need description and user_id
-def retrieve_qb_question(need_description:str, user_id: int):
-    
+def retrieve_qb_question(need_description:str, user_id: int, db: Session = Depends(get_db)):
+       
 
     topic_number, question_typenum_within_topic = determine_question_type(need_description, question_topics)
+    print("question type found")
 
     if topic_number == "Other":
         
@@ -386,24 +408,32 @@ def retrieve_qb_question(need_description:str, user_id: int):
     # logic for mapping LLM response to actual question type names in DB
     question_type = question_mapping[int(topic_number)][question_typenum_within_topic]
 
+    question_type_id = db.query(QuestionType).filter(QuestionType.name == question_type).first().id
+    print("question id found")
 
-    #avoid repeat questions: logic for determining which question number the user on for that type by querying DB
+    #avoid repeat questions: logic for determining which question number the user is on for that type by querying DB
+    progress_record = get_user_progress_on_question_type(db, user_id, question_type_id)
+
+    if progress_record:
+        print(f"User {user_id} is on question number {progress_record.progress} for question type {question_type_id}.")
+    else:
+        print(f"No progress record found for user {user_id} on question type {question_type_id}.")
 
 
     #query db for question
-
-
-    question = QuestionBank().get_random_question()
+    question = get_question_by_sub_topic_and_number(db, question_type, progress_record.progress + 1)
+    
+    #increment user progress
+    increment_user_progress(db, user_id, question_type)
 
     #logic for displaying question to user
-
 
     return question
 
 def retrieve_pt_question():
     #logic
     
-    question = PracticeTestsTable().get_random_question()
+    question = PracticeTestQuestion().get_random_question()
 
 
     #logic for displaying question to user
@@ -428,6 +458,7 @@ action_re = re.compile('^Action: (\w+): (.*)$')   # python regular expression to
 
 def query_agent(messages, user_id, max_turns=3):
     i = 0
+    print("agent queried")
     bot = Agent()
     print("agent created")
     next_prompt = messages
@@ -452,7 +483,6 @@ def query_agent(messages, user_id, max_turns=3):
             next_prompt = "Observation: {}".format(observation)
         else:
             return result
-
 
 
 

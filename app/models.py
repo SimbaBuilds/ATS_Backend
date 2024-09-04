@@ -1,5 +1,6 @@
 from sqlalchemy import Column, Integer, String, TIMESTAMP, Boolean, Text, Date, ForeignKey, Float, JSON, UniqueConstraint
 from sqlalchemy.dialects.postgresql import JSONB, UUID
+from uuid import UUID as PythonUUID
 from sqlalchemy_utils import UUIDType
 from sqlalchemy.sql import func
 from app.database.base import Base
@@ -8,9 +9,7 @@ from sqlalchemy.schema import Sequence  # For managing default sequences
 from pydantic import BaseModel, EmailStr
 from datetime import datetime, date
 from typing import Optional, Dict, List
-from uuid import UUID
 from sqlalchemy.orm import relationship
-from sqlalchemy.dialects.postgresql import UUID
 import uuid
 
 
@@ -37,6 +36,7 @@ class Answer(Base):
     correct = Column(Boolean, nullable=False)  # Indicates if the answer is correct
     timestamp = Column(TIMESTAMP, server_default=func.now(), onupdate=func.now(), nullable=False)  # Submission time
 
+
 class ChatHistory(Base):
     __tablename__ = "chat_history"
 
@@ -50,8 +50,8 @@ class ChatHistory(Base):
 class Conversation(Base):
     __tablename__ = 'conversations'
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
-    user_id = Column(UUID(as_uuid=True), ForeignKey('users.id'), nullable=False)
+    id = Column(primary_key=True, default=uuid.uuid4, index=True)
+    user_id = Column(UUID(as_uuid=True), ForeignKey('users.user_id'), nullable=False)
     conversation_number = Column(Integer, nullable=False)
     timestamp = Column(TIMESTAMP, server_default=func.now())  # Automatically set the current timestamp
 
@@ -66,23 +66,14 @@ class Message(Base):
     __tablename__ = 'messages'
 
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(UUID(as_uuid=True), ForeignKey('users.id'), nullable=False)
+    user_id = Column(UUID(as_uuid=True), ForeignKey('users.user_id'), nullable=False)
     content = Column(String)
     role = Column(String)
     timestamp = Column(TIMESTAMP, server_default=func.now())  # Automatically set the current timestamp
-    conversation_id = Column(UUID, ForeignKey('conversations.id'))
+    conversation_id = Column(ForeignKey('conversations.id'))
 
     conversation = relationship("Conversation", back_populates="messages")
 
-
-
-class ChatbotResponse(Base):
-    __tablename__ = "chatbot_responses"
-
-    id = Column(Integer, primary_key=True, autoincrement=True, index=True)  # Primary key
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)  # Reference to "users" table
-    response = Column(Text, nullable=False)  # Chatbot's response message
-    created_at = Column(TIMESTAMP, server_default=func.now())  # When the response was created
 
 
 class CurriculumPlan(Base):
@@ -152,7 +143,7 @@ class PerformanceAnalytics(Base):
 
 
 # Practice test table for storing practice test data
-class PracticeTestsTable(Base):
+class PracticeTestQuestion(Base):
     __tablename__ = "practice_tests_table"
 
     id = Column(Integer, primary_key=True, autoincrement=True, index=True)
@@ -176,7 +167,7 @@ class PracticeTestsTable(Base):
 
 
 
-class QuestionBank(Base):
+class QuestionBankQuestion(Base):
     __tablename__ = "question_bank_table"  # Match the table name in your schema
 
      # Primary key with auto-incrementing sequence
@@ -264,25 +255,6 @@ class UserPracticeTests(Base):
 
 
 
-class UserProgress(Base):
-    __tablename__ = "user_progress"
-
-    id = Column(Integer, primary_key=True, autoincrement=True, index=True)
-    user_id = Column(Integer, nullable=False, index=True)  # ID of the user
-    quiz_id = Column(Integer, nullable=False, index=True)  # ID of the quiz or test
-    score = Column(Integer, nullable=False)  # Score (can be a percentage or total)
-    timestamp = Column(TIMESTAMP, server_default=func.now())  # When the progress was recorded
-    session_id = Column(UUIDType, nullable=True, index=True)
-
-
-
-class UserQuestionsSeen(Base):
-    __tablename__ = "user_questions_seen"
-
-    user_id = Column(Integer, ForeignKey("users.id"), primary_key=True)  # Foreign key to the user table
-    question_id = Column(Integer, ForeignKey("question_bank_table.id"), primary_key=True)  # Foreign key to the question bank
-    seen_at = Column(TIMESTAMP, server_default=func.now())  # Timestamp when the user saw the question
-
 
 
 class UserSettings(Base):
@@ -298,7 +270,7 @@ class UserSettings(Base):
 class User(Base):
     __tablename__ = "users"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
+    user_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
     access_token = Column(String(255), nullable=True)  
     token_type = Column(String(255), nullable=True)  
     username = Column(String(255), unique=True, nullable=False)
@@ -311,7 +283,7 @@ class User(Base):
     status = Column(Boolean, default=True)  # Active or suspended
     profile_picture = Column(String(255), nullable=True)  # Reference to the profile picture
     additional_info = Column(JSONB, nullable=True)  # Store additional user-related data
-
+    progress = relationship('UserQuestionProgress', back_populates='user')
 
 class QuestionType(Base):
     __tablename__ = 'question_types'
@@ -321,7 +293,7 @@ class QuestionType(Base):
 
 class UserQuestionProgress(Base):
     __tablename__ = 'user_question_progress'
-    user_id = Column(Integer, ForeignKey('users.user_id'), primary_key=True)
+    user_id = Column(UUID(as_uuid=True), ForeignKey('users.user_id'), primary_key=True)
     question_type_id = Column(Integer, ForeignKey('question_types.question_type_id'), primary_key=True)
     progress = Column(Integer, nullable=False, default=0)
     user = relationship('User', back_populates='progress')
@@ -331,7 +303,18 @@ class UserQuestionProgress(Base):
         UniqueConstraint('user_id', 'question_type_id', name='uix_user_question_type'),
     )
 
-# MODEL TO DB
+class UserProgress(Base):
+    __tablename__ = "user_progress"
+
+    id = Column(Integer, primary_key=True, autoincrement=True, index=True)
+    user_id = Column(Integer, nullable=False, index=True)  # ID of the user
+    quiz_id = Column(Integer, nullable=False, index=True)  # ID of the quiz or test
+    score = Column(Integer, nullable=False)  # Score (can be a percentage or total)
+    timestamp = Column(TIMESTAMP, server_default=func.now())  # When the progress was recorded
+    session_id = Column(UUIDType, nullable=True, index=True)
+
+
+# # MODEL TO DB
 # from sqlalchemy import create_engine
 # from app.database.base import Base
 # from app.models import *  # This imports all models

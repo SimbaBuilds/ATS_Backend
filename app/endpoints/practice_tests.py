@@ -4,7 +4,7 @@ from fastapi import FastAPI, HTTPException, Path, Depends, APIRouter
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import SQLAlchemyError
 from app.database.session import get_db  # Database session setup
-from app.models import PracticeTestsTable, TestAttempt # Using existing SQLAlchemy models
+from app.models import PracticeTestQuestion, TestAttempt # Using existing SQLAlchemy models
 from app.schemas import GetTestResponse, CreateTestResponse, DeleteTestResponse
 
 # define FastAPI router
@@ -16,7 +16,7 @@ async def get_test(
     db: Session = Depends(get_db)
 ):
     try:
-        test = db.query(PracticeTestsTable).filter_by(id=id).first()
+        test = db.query(PracticeTestQuestion).filter_by(id=id).first()
 
         if not test:
             raise HTTPException(status_code=404, detail="Test not found")
@@ -32,7 +32,7 @@ async def create_test(
     db: Session = Depends(get_db)
 ):
     try:
-        new_test = PracticeTestsTable(test_name=test_name, content=content)
+        new_test = PracticeTestQuestion(test_name=test_name, content=content)
 
         db.add(new_test)
         db.commit()
@@ -48,7 +48,7 @@ async def delete_test(
     db: Session = Depends(get_db)
 ):
     try:
-        test = db.query(PracticeTestsTable).filter_by(id=id).first()
+        test = db.query(PracticeTestQuestion).filter_by(id=id).first()
 
         if not test:
             raise HTTPException(status_code=404, detail="Test not found")
