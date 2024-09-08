@@ -52,15 +52,14 @@ async def update_conversation(conversation_id: str, user_id: UUID = Form(...), c
     if not conversation_history:
         conversation_history.append({"role": "system", "content": "You are a digital SAT tutor.", "type": "text"})
 
-    chatbot_response_text = query_agent(conversation_history, user_id)
-    print(f"Chatbot Response: {chatbot_response_text}")
+    chatbot_response_text = query_agent(conversation_history, user_id, db)
 
     # Append chatbot response to the conversation history
     bot_msg = Message(user_id=user_id, content=chatbot_response_text, role='assistant', conversation_id=conversation_id)
     db.add(bot_msg)
     db.commit()
     db.refresh(conversation)
-    print("Chatbot Message Added")
+    print("Chatbot Message Added to DB")
 
     # Return the updated conversation, serialized using Pydantic
     return ChatbotResponseSchema(user_id=user_id, response=chatbot_response_text)

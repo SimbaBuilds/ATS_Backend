@@ -1,7 +1,8 @@
-import openai
 from openai import OpenAI
 
-openai.api_key = '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'
+client = OpenAI(api_key='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')
+from openai import OpenAI
+
 from duckduckgo_search import DDGS
 import re
 from sqlalchemy.orm import Session
@@ -15,42 +16,6 @@ from app.utils.db_rtrvl_utils import get_user_progress_on_question_type, get_que
 
 client = OpenAI()
 
-class Agent:
-    def __init__(self, system=None):
-        self.messages = []
-
-        if isinstance(system, list):
-            # Initialize with a list of dictionaries
-            self.messages = system
-        elif isinstance(system, str) and system:
-            # Initialize with a system message string
-            self.messages.append({
-                "role": "system", 
-                "content": system,  # Content is a plain string
-                "type": "text"      # Assuming "type" is required
-            })
-
-    def __call__(self, message):
-        self.messages.append({
-            "role": "user", 
-            "content": message,  # Content is a plain string
-            "type": "text"       # Assuming "type" is required
-        })
-        result = self.execute()
-        self.messages.append({
-            "role": "assistant", 
-            "content": result,  # Content is a plain string
-            "type": "text"      # Assuming "type" is required
-        })
-        return result
-
-    def execute(self):
-        completion = client.chat.completions.create(
-                        model="gpt-4o", 
-                        temperature=0,
-                        messages=self.messages)
-        return completion.choices[0].message.content
-
 potential_topic_confusion = """
   If the student is practicing command of quantitative evidence from a graph or table while in a reading/writing session, specify this in the action parameter so that a math question is not pulled.
 """
@@ -59,10 +24,11 @@ prompt = f"""
 You are an expert SAT tutor who is leading a tutoring session.
 You operate in a loop of 4 phases: Thought, Action, PAUSE, and Observation.
 At the end of the loop you will output an Answer.
-1. Thought: Use Thought to describe which action to take
-2. Action: Execute the chosen action using the format Action: <action_name>: <parameters>. Use one of the available actions below, then return “PAUSE.”
-3. Observation: After "PAUSE", you will receive the result of your action in the form of an "Observation".
-4. Answer: You will use the Observation to provide your final response.
+1. Thought: Use Thought to describe which action, if any, to take
+2. Action: If applicable, execute the chosen action using the format Action: <action_name>: <parameters>. Use one of the available actions below.
+Then return “PAUSE.”
+3. Observation: If an action was present, after "PAUSE", you will receive the result of your action in the form of an "Observation".
+4. Answer: If an action was taken, ou will use the Observation to provide your final response.  Otherwise, your answer will be an explanation or continuation of the conversation.
 
 Your available actions are:
   
@@ -72,15 +38,14 @@ Retrieve a question from a question bank (e.g., Action: retrieve_qb_question: We
 Retrieve a question from a practice test (e.g., Action: retrieve_pt_question: [specify question based on some logic])
 3. web_search: 
 Search the web for the answer to a question about SAT dates, deadlines, and updates or any other question that you don't have the answer to (e.g., Action: web_search: When is the next SAT?)
-4. Explain a concept to the student or continue the conversation.
 
-The first 3 actions require a tool/function call.  The fourth does not.
+If there are no actions to take your Answer will be explaining a concept to the student or continuing the conversation. e.g. Answer: (explanation or continuation)
 
 Example query:
 
 Conversation State: The student is practicing command of quantitative evidence from a graph while in a reading/writing session.
 Thought: I should pull a question from the reading and writing section testing command of quantitative evidence from a graph using retrieve_qb_question
-Action: retrieve_qb_question: We need a question from the reading and writing topic that tests command of quantiative evidence from a graph
+Action: retrieve_qb_question: We need a question from the reading and writing topic that tests command of quantiative evidence from a graph.
 PAUSE
 
 You will then receive the result of your action.
@@ -96,6 +61,51 @@ The loop will end here now that you have provided an answer.
 Note: {potential_topic_confusion}
 
 """.strip()
+
+class Agent:
+    def __init__(self, system = prompt):
+        self.messages = []
+
+        if isinstance(system, list):
+            # Initialize with a list of dictionaries
+            self.messages = system
+        elif isinstance(system, str) and system:
+            # Initialize with a system message string
+            self.messages.append({
+                "role": "system", 
+                "content": system,  #
+                "type": "text"      
+            })
+
+    def __call__(self, message):
+        if isinstance(message, list):
+            # Assuming the list contains dictionaries in the expected format
+            for msg in message:
+                if 'role' in msg and 'content' in msg and 'type' in msg:
+                    self.messages.append(msg)
+                else:
+                    raise ValueError("Each message must contain 'role', 'content', and 'type'.")
+        else:
+            # Append a single user message
+            self.messages.append({
+                "role": "user", 
+                "content": message,  # Content is a plain string
+                "type": "text"       # Assuming "type" is required
+            })
+        result = self.execute()
+        self.messages.append({
+            "role": "assistant", 
+            "content": result,  # Content is a plain string
+            "type": "text"      # Assuming "type" is required
+        })
+        return result
+
+    def execute(self):
+        completion = client.chat.completions.create(
+                        model="gpt-4o-mini", 
+                        temperature=0.7,
+                        messages=self.messages)
+        return completion.choices[0].message.content
 
 question_descriptions = [
     """Data Analysis:
@@ -345,18 +355,17 @@ def determine_exact_question_type(topic_description: str, need_description: str)
     Respond with only the number of the question type from the list of topic descriptions.
     Respond with "Other" if no question type suffices.
     """
-    
-    response = openai.Completion.create(
-        model="gpt-4o-mini",
-        prompt=prompt,
-        max_tokens=150,
-        n=1,
-        stop=None,
-        temperature=0.7
-    )
+  
+
+    response = client.chat.completions.create(
+                model="gpt-4o-mini",
+                max_tokens=150,
+                temperature=0.7,
+                messages=[{"role": "user", "content": prompt}]
+)
 
     # Extract and return the relevant question types from the response
-    question_type = response.choices[0]['message']['content']
+    question_type = response.choices[0].message.content
 
     return question_type
 
@@ -370,15 +379,13 @@ def determine_question_type(need_description: str, question_topics: dict) -> lis
     Respond with "Other" if no question topic suffices.
     """
     
-    response = openai.Completion.create(
-        model="gpt-4o-mini",
-        prompt=prompt,
-        max_tokens=150,
-        n=1,
-        stop=None,
-        temperature=0.7
-    )
-    topic_number = response.choices[0]['message']['content']
+    response = client.chat.completions.create(
+                model="gpt-4o-mini",
+                max_tokens=150,
+                temperature=0.7,
+                messages=[{"role": "user", "content": prompt}]
+)
+    topic_number = response.choices[0].message.content
 
     if topic_number == "Other":
         
@@ -394,11 +401,13 @@ def determine_question_type(need_description: str, question_topics: dict) -> lis
     
     return topic_number, question_typenum_within_topic
 
-def retrieve_qb_question(need_description:str, user_id: int, db: Session = Depends(get_db)):
+def retrieve_qb_question(need_description:str, user_id: int, db: Session):
        
 
     topic_number, question_typenum_within_topic = determine_question_type(need_description, question_topics)
-    print("question type found")
+    print(f"question type found with coordinates: {topic_number, question_typenum_within_topic}")
+
+# checpkt
 
     if topic_number == "Other":
         
@@ -430,7 +439,7 @@ def retrieve_qb_question(need_description:str, user_id: int, db: Session = Depen
 
     return question
 
-def retrieve_pt_question():
+def retrieve_pt_question(need_description:str, user_id: int, db: Session):
     #logic
     
     question = PracticeTestQuestion().get_random_question()
@@ -452,11 +461,12 @@ known_actions = {
     "retrieve_qb_question": retrieve_qb_question,
     "retrieve_pt_question": retrieve_pt_question,
     "search the web": web_search
+  
 }
 
 action_re = re.compile('^Action: (\w+): (.*)$')   # python regular expression to selection action
 
-def query_agent(messages, user_id, max_turns=3):
+def query_agent(messages, user_id, db, max_turns=3):
     i = 0
     print("agent queried")
     bot = Agent()
@@ -476,14 +486,15 @@ def query_agent(messages, user_id, max_turns=3):
             # There is an action to run
             action, action_input = actions[0].groups()
             if action not in known_actions:
-                raise Exception("Unknown action: {}: {}".format(action, action_input, user_id))
-            print(" -- running {} {}".format(action, action_input, user_id))
-            observation = known_actions[action](action_input, user_id)
+                raise Exception("Unknown action: {}: {}".format(action, action_input, user_id, db))
+            print(" -- running {} {}".format(action, action_input, user_id, db))
+            observation = known_actions[action](action_input, user_id, db)
             print("Observation:", observation)
             next_prompt = "Observation: {}".format(observation)
         else:
+            print("no action found")
+            result = result.replace("Answer:", "")
             return result
-
 
 
 # # gpt4o, pip install openai==0.28
