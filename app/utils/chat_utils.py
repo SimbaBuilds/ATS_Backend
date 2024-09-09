@@ -7,10 +7,14 @@ from duckduckgo_search import DDGS
 import re
 from sqlalchemy.orm import Session
 from app.models import UserQuestionProgress, QuestionType, QuestionBankQuestion, PracticeTestQuestion
+from app.schemas import GetQBQuestionResponse
 from sqlalchemy.dialects.postgresql import UUID
 from fastapi import FastAPI, UploadFile, File, HTTPException, Depends, APIRouter, Form
 from app.database.session import get_db  # Assuming the database session function exists
 from app.utils.db_rtrvl_utils import get_user_progress_on_question_type, get_question_by_sub_topic_and_number, increment_user_progress
+from typing import Optional, Dict, List
+from pydantic import BaseModel
+from typing import List
 
 
 
@@ -52,9 +56,11 @@ You will then receive the result of your action.
 
 Observation: [Question Metadata]
 
+(The question has been displayed to user so you do not need to come up with a question) 
+
 You then output:
 
-Answer: (question has been displayed to user) Try this question -- let me know if you get stuck.
+Answer: Try this question -- let me know if you get stuck.
 
 The loop will end here now that you have provided an answer.
 
@@ -405,9 +411,7 @@ def retrieve_qb_question(need_description:str, user_id: int, db: Session):
        
 
     topic_number, question_typenum_within_topic = determine_question_type(need_description, question_topics)
-    print(f"question type found with coordinates: {topic_number, question_typenum_within_topic}")
-
-# checpkt
+    print(f"question type found with coordinates: {int(topic_number), question_typenum_within_topic}")
 
     if topic_number == "Other":
         
@@ -417,25 +421,27 @@ def retrieve_qb_question(need_description:str, user_id: int, db: Session):
     # logic for mapping LLM response to actual question type names in DB
     question_type = question_mapping[int(topic_number)][question_typenum_within_topic]
 
-    question_type_id = db.query(QuestionType).filter(QuestionType.name == question_type).first().id
+    question_type_id = db.query(QuestionType).filter(QuestionType.question_type_name == question_type).first().question_type_id
     print("question id found")
 
     #avoid repeat questions: logic for determining which question number the user is on for that type by querying DB
     progress_record = get_user_progress_on_question_type(db, user_id, question_type_id)
+    print(f"the user is on question {progress_record + 1}")
 
     if progress_record:
-        print(f"User {user_id} is on question number {progress_record.progress} for question type {question_type_id}.")
+        print(f"User {user_id} is on question number {progress_record + 1} for question type {question_type_id}.")
     else:
         print(f"No progress record found for user {user_id} on question type {question_type_id}.")
 
 
-    #query db for question
-    question = get_question_by_sub_topic_and_number(db, question_type, progress_record.progress + 1)
-    
-    #increment user progress
+   #increment user progress
     increment_user_progress(db, user_id, question_type)
 
-    #logic for displaying question to user
+
+    #query db for question
+    question = get_question_by_sub_topic_and_number(db, question_type, progress_record + 1)
+    print("question metadata retrieved")
+
 
     return question
 
@@ -466,12 +472,13 @@ known_actions = {
 
 action_re = re.compile('^Action: (\w+): (.*)$')   # python regular expression to selection action
 
-def query_agent(messages, user_id, db, max_turns=3):
+def query_agent(messages, user_id: UUID, db, max_turns=3):
     i = 0
     print("agent queried")
     bot = Agent()
     print("agent created")
     next_prompt = messages
+    observation = None  
     while i < max_turns:
         i += 1
         result = bot(next_prompt)
@@ -488,13 +495,13 @@ def query_agent(messages, user_id, db, max_turns=3):
             if action not in known_actions:
                 raise Exception("Unknown action: {}: {}".format(action, action_input, user_id, db))
             print(" -- running {} {}".format(action, action_input, user_id, db))
-            observation = known_actions[action](action_input, user_id, db)
+            observation = known_actions[action](action_input, user_id, db) # execute the action and store in observation
             print("Observation:", observation)
             next_prompt = "Observation: {}".format(observation)
         else:
-            print("no action found")
+            print("no further action found")
             result = result.replace("Answer:", "")
-            return result
+            return result, observation
 
 
 # # gpt4o, pip install openai==0.28

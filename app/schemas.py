@@ -488,6 +488,7 @@ class QuestionBase(BaseModel):
 
 # Pydantic model for QuestionBank
 class GetQBQuestionResponse(BaseModel):
+    chatbot_response: str
     id: int
     topic: Optional[str]
     sub_topic: Optional[str]

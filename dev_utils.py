@@ -5,11 +5,11 @@ from app.models import *  # This imports all models
 from app.database.session import get_db as db  # Assuming the database session function exists
 from sqlalchemy.orm import sessionmaker
 from app.database.config import engine
+import uuid
 
 
-
-
-# # MODEL TO DB
+# # MODELS TO DB Tables
+#region
 # from sqlalchemy import create_engine
 # from app.database.base import Base
 # from app.models import *  # This imports all models
@@ -17,11 +17,29 @@ from app.database.config import engine
 # DATABASE_URL = "postgresql://cameronhightower:Wellpleased22!@localhost:5432/automated_tutoring_service"
 # engine = create_engine(DATABASE_URL, echo=True)  # Set echo to True to log SQL queries
 # Base.metadata.create_all(engine)
+#endregion
 
 
 
+def swap_equation_and_image(db_session):
+    # Query all records in the table
+    questions = db_session.query(QuestionBankQuestion).all()
+
+    for question in questions:
+        # Swap the values of 'equation' and 'image'
+        question.equation, question.image = question.image, question.equation
+
+    # Commit the changes to the database
+    session.commit()
+
+Session = sessionmaker(bind=engine)
+session = Session()
+swap_equation_and_image(session)
+session.close()
 
 
+# POPULATE QUESTION TYPES
+#region
 # types = [
 #     "abs_value_algebra",
 #     "advanced_quantitative_reasoning",
@@ -111,11 +129,29 @@ from app.database.config import engine
     
 #     # Commit the changes to the database
 #     db_session.commit()
+# # Create a session and populate the table
+# Session = sessionmaker(bind=engine)
+# session = Session()
+# populate_question_types(session)
+# session.close()
+#endregion
+
+# POPULATE USER QUESTION PROGRESS. ALSO YOU CAN JUST CLICK INTO THE DB ON PGADMIN4 FOR STUFF LIKE BELOW
+#region
+# this_uuid = uuid.UUID("550e8400-e29b-41d4-a716-446655440000")
+# this_id = 64
+# progress = 1
+# def populate_user_question_progress(db_session):
+ 
+#     new_progress = UserQuestionProgress(user_id = this_uuid, question_type_id=64)
+#     db_session.add(new_progress)
+    
+#     # Commit the changes to the database
+#     db_session.commit()
 
 # # Create a session and populate the table
 # Session = sessionmaker(bind=engine)
 # session = Session()
-
-# populate_question_types(session)
-
+# populate_user_question_progress(session)
 # session.close()
+#endregion

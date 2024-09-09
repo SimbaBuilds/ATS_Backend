@@ -2,7 +2,7 @@
 from fastapi import FastAPI, UploadFile, File, HTTPException, Depends, APIRouter, Form
 from sqlalchemy.orm import Session
 from app.models import UserMessage, Feedback, Conversation, Message
-from app.schemas import UserMessageStatusResponse, ChatbotResponseSchema, AnalyzeImageResponse, ChatHistoryResponse, FeedbackReceivedResponse, UserMessageSchema, FeedbackModel, ChatHistorySchema, MessageSchema, ConversationSchema
+from app.schemas import *
 from app.database.session import get_db  # Assuming the database session function exists
 from app.utils.chat_utils import query_agent
 from uuid import uuid4
@@ -13,7 +13,7 @@ import uuid
 router = APIRouter()
 
 
-@router.put("/chat/conversation/{conversation_id}", response_model=ChatbotResponseSchema)
+@router.put("/chat/conversation/{conversation_id}", response_model=GetQBQuestionResponse)
 async def update_conversation(conversation_id: str, user_id: UUID = Form(...), content: str = Form(...), role: str = Form('user'), file: UploadFile = File(None), db: Session = Depends(get_db)):
     # Generate a new conversation ID if not provided
     conversation_id = str(uuid4()) if not conversation_id else conversation_id
@@ -52,17 +52,41 @@ async def update_conversation(conversation_id: str, user_id: UUID = Form(...), c
     if not conversation_history:
         conversation_history.append({"role": "system", "content": "You are a digital SAT tutor.", "type": "text"})
 
-    chatbot_response_text = query_agent(conversation_history, user_id, db)
+    chatbot_response_text, question_metadata = query_agent(conversation_history, user_id, db)
+
+    tabular_data_string = str(question_metadata.tabular_data)
+    choices_string = str(question_metadata.choices)
+
+    payload_to_chatbot = f"""chatbot response:{chatbot_response_text} \n figure description:{question_metadata.figure_description} \n 
+    equation:{question_metadata.equation} \n question content:{question_metadata.question_content} \n
+    answer explanation:{question_metadata.answer_explanation} \n correct answer:{question_metadata.correct_answer} \n
+    tabular data:{tabular_data_string} \n choices:{choices_string}
+    """
 
     # Append chatbot response to the conversation history
-    bot_msg = Message(user_id=user_id, content=chatbot_response_text, role='assistant', conversation_id=conversation_id)
+    bot_msg = Message(user_id=user_id, content=payload_to_chatbot, role='assistant', conversation_id=conversation_id)
     db.add(bot_msg)
     db.commit()
     db.refresh(conversation)
     print("Chatbot Message Added to DB")
 
-    # Return the updated conversation, serialized using Pydantic
-    return ChatbotResponseSchema(user_id=user_id, response=chatbot_response_text)
+    # Return the updated conversation with chatbot response and question metadata, serialized using Pydantic
+    return GetQBQuestionResponse(
+    chatbot_response = chatbot_response_text,
+    id=question_metadata.id,
+    topic=question_metadata.topic,
+    sub_topic=question_metadata.sub_topic,
+    question_number_in_subtopic=question_metadata.question_number_in_subtopic,
+    figure_description=question_metadata.figure_description,
+    image=question_metadata.image,
+    equation=question_metadata.equation,
+    svg=question_metadata.svg,
+    question_content=question_metadata.question_content,
+    answer_explanation=question_metadata.answer_explanation,
+    correct_answer=question_metadata.correct_answer,
+    tabular_data=question_metadata.tabular_data or {},  # ensure this is a dictionary
+    choices=question_metadata.choices or {}  # ensure this is a dictionary
+)
 
 
 
