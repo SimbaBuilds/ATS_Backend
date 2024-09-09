@@ -20,22 +20,63 @@ import uuid
 #endregion
 
 
+import csv
+from sqlalchemy.orm import Session
 
-def swap_equation_and_image(db_session):
+# Function to back up the QuestionBankQuestion table to a CSV file
+def backup_question_bank_to_csv(session: Session, output_file: str):
     # Query all records in the table
-    questions = db_session.query(QuestionBankQuestion).all()
+    questions = session.query(QuestionBankQuestion).all()
 
-    for question in questions:
-        # Swap the values of 'equation' and 'image'
-        question.equation, question.image = question.image, question.equation
+    # Open a CSV file for writing
+    with open(output_file, mode='w', newline='', encoding='utf-8') as csv_file:
+        writer = csv.writer(csv_file)
 
-    # Commit the changes to the database
-    session.commit()
+        # Write the header (column names)
+        writer.writerow([
+            'id', 'topic', 'sub_topic', 'question_number_in_subtopic', 'figure_description',
+            'image', 'equation', 'svg', 'question_content', 'answer_explanation',
+            'correct_answer', 'tabular_data', 'choices'
+        ])
 
-Session = sessionmaker(bind=engine)
-session = Session()
-swap_equation_and_image(session)
-session.close()
+        # Write each record as a row in the CSV file
+        for question in questions:
+            writer.writerow([
+                question.id,
+                question.topic,
+                question.sub_topic,
+                question.question_number_in_subtopic,
+                question.figure_description,
+                question.image,
+                question.equation,
+                question.svg,
+                question.question_content,
+                question.answer_explanation,
+                question.correct_answer,
+                question.tabular_data,
+                question.choices
+            ])
+
+# Example usage (assuming you already have a session)
+# with Session(engine) as session:
+#     backup_question_bank_to_csv(session, 'question_bank_backup.csv')
+
+
+# def swap_equation_and_image(db_session):
+#     # Query all records in the table
+#     questions = db_session.query(QuestionBankQuestion).all()
+
+#     for question in questions:
+#         # Swap the values of 'equation' and 'image'
+#         question.equation, question.image = question.image, question.equation
+
+#     # Commit the changes to the database
+#     session.commit()
+
+# Session = sessionmaker(bind=engine)
+# session = Session()
+# swap_equation_and_image(session)
+# session.close()
 
 
 # POPULATE QUESTION TYPES

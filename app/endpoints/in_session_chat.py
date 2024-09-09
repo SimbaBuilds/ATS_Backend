@@ -57,7 +57,8 @@ async def update_conversation(conversation_id: str, user_id: UUID = Form(...), c
     tabular_data_string = str(question_metadata.tabular_data)
     choices_string = str(question_metadata.choices)
 
-    payload_to_chatbot = f"""chatbot response:{chatbot_response_text} \n figure description:{question_metadata.figure_description} \n 
+    payload_to_chatbot = f"""chatbot response:{chatbot_response_text} \n Note: of the following information, the user will only be shown images/tables and the question content, not answer explanations or correct answers.
+    figure description:{question_metadata.figure_description} \n 
     equation:{question_metadata.equation} \n question content:{question_metadata.question_content} \n
     answer explanation:{question_metadata.answer_explanation} \n correct answer:{question_metadata.correct_answer} \n
     tabular data:{tabular_data_string} \n choices:{choices_string}
