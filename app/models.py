@@ -298,7 +298,11 @@ class UserQuestionProgress(Base):
     progress = Column(Integer, nullable=False, default=0)
     user = relationship('User', back_populates='progress')
     question_type = relationship('QuestionType', back_populates='progress')
-    
+
+    @property
+    def question_type_name(self):
+        return self.question_type.question_type_name
+
     __table_args__ = (
         UniqueConstraint('user_id', 'question_type_id', name='uix_user_question_type'),
     )
