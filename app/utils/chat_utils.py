@@ -56,7 +56,7 @@ You will then receive the result of your action.
 
 Observation: [Question Metadata]
 
-(The question has been displayed to user so you do not need to come up with a question) 
+The question has been displayed to user so you do not need to come up with a question.  You will be given the question metedata.
 
 You then output:
 

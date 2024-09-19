@@ -54,13 +54,16 @@ def update_question_bank(session):
 
 
     # Query to find all questions with sub_topic in the specified list
-    questions = session.query(QuestionBankQuestion).filter(QuestionBankQuestion.sub_topic.in_(['algebraic_inequalities'])).filter(QuestionBankQuestion.question_number_in_subtopic == 10).all()
-    # questions = session.query(QuestionBankQuestion).filter(QuestionBankQuestion.sub_topic.in_(['algebraic_inequalities'])).all()
+    # questions = session.query(QuestionBankQuestion).filter(QuestionBankQuestion.sub_topic.in_(['multi_step'])).filter(QuestionBankQuestion.question_number_in_subtopic == 16).all()
+    questions = session.query(QuestionBankQuestion).all()
+
+    # questions = session.query(QuestionBankQuestion).tabular_data()
     # questions = session.query(QuestionBankQuestion).filter(QuestionBankQuestion.sub_topic.in_(['expanding_radicals'])).all()
+
 
     for question in questions:
         # Get the current question content
-        text = question.question_content
+        text = question.tabular_data
         
         # Apply the regex patterns in sequence
         # updated_content = remove_single_letter.sub(r'\1', updated_content)  # Remove dollar signs around single letters
@@ -83,20 +86,21 @@ def update_question_bank(session):
         
         
         
-        result = get_completion_from_openai(messages)
+        # result = get_completion_from_openai(messages)
+        if text == '':
+            question.tabular_data = {}
 
 
-
-        question.question_content = result
+        # question.tabular_data = result
 
     # Commit the changes to the database
     session.commit()
 
 
-# Session = sessionmaker(bind=engine)
-# session = Session()
-# update_question_bank(session)
-# session.close()
+Session = sessionmaker(bind=engine)
+session = Session()
+update_question_bank(session)
+session.close()
 
 
 
@@ -406,10 +410,10 @@ def backup_question_bank_to_csv(session, output_file: str):
                 question.tabular_data,
                 question.choices
             ])
-Session = sessionmaker(bind=engine)
-session = Session()
-backup_practice_test_to_csv(session, "qb_backup.csv")
-session.close()
+# Session = sessionmaker(bind=engine)
+# session = Session()
+# backup_practice_test_to_csv(session, "qb_backup.csv")
+# session.close()
 
 
 
