@@ -1,6 +1,5 @@
 from openai import OpenAI
 
-client = OpenAI(api_key='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')
 from openai import OpenAI
 
 from duckduckgo_search import DDGS
@@ -17,7 +16,7 @@ from pydantic import BaseModel
 from typing import List
 
 
-
+client = OpenAI(api_key='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')
 client = OpenAI()
 
 potential_topic_confusion = """

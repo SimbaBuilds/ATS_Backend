@@ -11,8 +11,12 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 import csv
 import re
+from openai import OpenAI
 
 
+
+client = OpenAI(api_key='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')
+client = OpenAI()
 
 
 
@@ -30,25 +34,57 @@ import re
 
 
 
+def get_completion_from_openai(messages):
+    completion = client.chat.completions.create(
+                        model="gpt-4o-mini", 
+                        temperature=0.7,
+                        messages=messages)
+    return completion.choices[0].message.content
 
 
 def update_question_bank(session):
     # Define the regex patterns
     # remove_single_letter = re.compile(r'\$(\w+)\$')  # Updated to handle any word characters (including multiple)
-    pattern1 = r"(\\\\frac\{[^{}]*\{[^{}]*\}[^{}]*\}\{[0-9]+\})"  #works on expanding radicals specifically
+    # pattern1 = r"(\\\\frac\{[^{}]*\{[^{}]*\}[^{}]*\}\{[0-9]+\})"  #works on expanding radicals specifically
+    # pattern2 = r"\d+\^\\\\circ"
+    # pattern3 = r"\\\\frac\{[^{}]*\}\{[^{}]*\}"
+    # pi_pattern = r"\\\\pi"
+    # remove_single_letter = re.compile(r'\$(\w+)\$')  # Updated to handle any word characters (including multiple)
+
+
 
     # Query to find all questions with sub_topic in the specified list
-    # questions = session.query(QuestionBankQuestion).filter(QuestionBankQuestion.sub_topic.in_(['expanding_radicals'])).filter(QuestionBankQuestion.question_number_in_subtopic == 1).all()
-    questions = session.query(QuestionBankQuestion).filter(QuestionBankQuestion.sub_topic.in_(['expanding_radicals'])).all()
+    questions = session.query(QuestionBankQuestion).filter(QuestionBankQuestion.sub_topic.in_(['algebraic_inequalities'])).filter(QuestionBankQuestion.question_number_in_subtopic == 10).all()
+    # questions = session.query(QuestionBankQuestion).filter(QuestionBankQuestion.sub_topic.in_(['algebraic_inequalities'])).all()
     # questions = session.query(QuestionBankQuestion).filter(QuestionBankQuestion.sub_topic.in_(['expanding_radicals'])).all()
 
     for question in questions:
         # Get the current question content
-        updated_content = question.question_content
+        text = question.question_content
         
         # Apply the regex patterns in sequence
         # updated_content = remove_single_letter.sub(r'\1', updated_content)  # Remove dollar signs around single letters
-        result = re.sub(pattern1, r"\\\\(\1\\\\)", updated_content)
+        # result = re.sub(pattern1, r"\\\\(\1\\\\)", text)
+        # result = re.sub(pattern2, r"\\\\(\g<0>\\\\)", text)
+        # result = re.sub(pattern3, r"\\\\(\g<0>\\\\)", text)
+        # result = re.sub(pi_pattern, r"\\\\(\\\\pi\\\\)", result)
+        prompt = f"""Add LaTex delimiters around the math content in the following string: {text}.  
+        Only return the string, no other words.  
+        For example, this string: Solve the inequality 13 - 3y \\\\geq 49..
+        Should be converted to: Solve the inequality \\\\(13 - 3y \\\\geq 49\\\\)..
+       
+        Be sure to double escape as shown above.
+        """
+        messages = [{
+                "role": "system", 
+                "content": prompt,  
+                "type": "text"      
+            }]
+        
+        
+        
+        result = get_completion_from_openai(messages)
+
 
 
         question.question_content = result
@@ -297,6 +333,46 @@ def populate_user_question_progress(db_session):
 
 
 
+def update_question_bank_archive(session):
+    # Define the regex patterns
+    # remove_single_letter = re.compile(r'\$(\w+)\$')  # Updated to handle any word characters (including multiple)
+    # remove_numbers = re.compile(r'\$(\d+(\.\d+)?)\$')  # Updated to handle decimals
+    # remove_percentage = re.compile(r'\$(\d+%)\$')  # Regex to remove dollar signs around percentages
+    # remove_double_backslashes = re.compile(r'\\\\')  # Regex to remove any double backslashes
+    # remove_percentage_with_signs = re.compile(r'\$(\d+%)\$')  # Regex to remove dollar signs around percentages
+    # remove_backslashes_before_percent = re.compile(r'\\%')  # Regex to remove backslashes before percentage signs
+    # remove_dollar_signs = re.compile(r'\$')
+    # replace_dollar_signs = re.compile(r'\$')
+
+    # Query to find all questions with sub_topic in the specified list
+    # questions = session.query(QuestionBankQuestion).filter(QuestionBankQuestion.sub_topic.in_(['advanced_quantitative_reasoning'])).filter(QuestionBankQuestion.question_number_in_subtopic == 43).all()
+    questions = session.query(QuestionBankQuestion).filter(~QuestionBankQuestion.sub_topic.in_(['frequency_tables'])).all()
+
+    for question in questions:
+        # Get the current question content
+        updated_content = question.question_content
+        
+        # Apply the regex patterns in sequence
+        # updated_content = remove_single_letter.sub(r'\1', updated_content)  # Remove dollar signs around single letters
+        # updated_content = remove_numbers.sub(r'\1', updated_content)  # Remove dollar signs around numbers (including decimals)
+        # updated_content = remove_percentage.sub(r'\1', updated_content)  # Remove dollar signs around percentages
+        # updated_content = remove_double_backslashes.sub(r'', updated_content)  # Remove double backslashes
+        # updated_content = remove_backslashes_before_percent.sub('%', updated_content)  # Remove backslashes before percentage signs
+        # updated_content = remove_percentage_with_signs.sub(r'\1', updated_content)  # Remove dollar signs around percentages
+        # updated_content = remove_dollar_signs.sub(r'', updated_content)
+        # updated_content = remove_double_backslashes_before_percent.sub('%', updated_content)
+        # if updated_content:  # Check if the dictionary is not empty
+        #     updated_content = {
+        #         key: replace_dollar_signs.sub(lambda match, c=[0]: '\\(' if c.append(c.pop() + 1) or c[0] % 2 == 1 else '\\)', value, 2)
+        #         for key, value in updated_content.items()
+        #     }      
+        # Update the question_content with the modified text
+        question.question_content = updated_content
+
+    # Commit the changes to the database
+    session.commit()
+
+
 # Function to back up the QuestionBankQuestion table to a CSV file
 def backup_question_bank_to_csv(session, output_file: str):
     # Query all records in the table
@@ -341,41 +417,3 @@ session.close()
 
 
 
-def update_question_bank_archive(session):
-    # Define the regex patterns
-    # remove_single_letter = re.compile(r'\$(\w+)\$')  # Updated to handle any word characters (including multiple)
-    # remove_numbers = re.compile(r'\$(\d+(\.\d+)?)\$')  # Updated to handle decimals
-    # remove_percentage = re.compile(r'\$(\d+%)\$')  # Regex to remove dollar signs around percentages
-    # remove_double_backslashes = re.compile(r'\\\\')  # Regex to remove any double backslashes
-    # remove_percentage_with_signs = re.compile(r'\$(\d+%)\$')  # Regex to remove dollar signs around percentages
-    # remove_backslashes_before_percent = re.compile(r'\\%')  # Regex to remove backslashes before percentage signs
-    # remove_dollar_signs = re.compile(r'\$')
-    # replace_dollar_signs = re.compile(r'\$')
-
-    # Query to find all questions with sub_topic in the specified list
-    # questions = session.query(QuestionBankQuestion).filter(QuestionBankQuestion.sub_topic.in_(['advanced_quantitative_reasoning'])).filter(QuestionBankQuestion.question_number_in_subtopic == 43).all()
-    questions = session.query(QuestionBankQuestion).filter(~QuestionBankQuestion.sub_topic.in_(['frequency_tables'])).all()
-
-    for question in questions:
-        # Get the current question content
-        updated_content = question.question_content
-        
-        # Apply the regex patterns in sequence
-        # updated_content = remove_single_letter.sub(r'\1', updated_content)  # Remove dollar signs around single letters
-        # updated_content = remove_numbers.sub(r'\1', updated_content)  # Remove dollar signs around numbers (including decimals)
-        # updated_content = remove_percentage.sub(r'\1', updated_content)  # Remove dollar signs around percentages
-        # updated_content = remove_double_backslashes.sub(r'', updated_content)  # Remove double backslashes
-        # updated_content = remove_backslashes_before_percent.sub('%', updated_content)  # Remove backslashes before percentage signs
-        # updated_content = remove_percentage_with_signs.sub(r'\1', updated_content)  # Remove dollar signs around percentages
-        # updated_content = remove_dollar_signs.sub(r'', updated_content)
-        # updated_content = remove_double_backslashes_before_percent.sub('%', updated_content)
-        # if updated_content:  # Check if the dictionary is not empty
-        #     updated_content = {
-        #         key: replace_dollar_signs.sub(lambda match, c=[0]: '\\(' if c.append(c.pop() + 1) or c[0] % 2 == 1 else '\\)', value, 2)
-        #         for key, value in updated_content.items()
-        #     }      
-        # Update the question_content with the modified text
-        question.question_content = updated_content
-
-    # Commit the changes to the database
-    session.commit()
