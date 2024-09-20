@@ -17,10 +17,9 @@ from typing import List
 
 
 client = OpenAI(api_key='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')
-client = OpenAI()
 
 potential_topic_confusion = """
-  If the student is practicing command of quantitative evidence from a graph or table while in a reading/writing session, specify this in the action parameter so that a math question is not pulled.
+  If the student is practicing command of quantitative evidence from a graph or table while in a reading/writing session, specify this in the action parameter.
 """
 
 prompt = f"""
@@ -36,9 +35,9 @@ Then return “PAUSE.”
 
 Your available actions are:
   
-1. retrieve_qb_question: 
+1. retrieve_questionbank_question: 
 Retrieve a question from a question bank (e.g., Action: retrieve_qb_question: We need a question on interpreting linear equations)
-2. retrieve_pt_question:
+2. retrieve_practicetest_question:
 Retrieve a question from a practice test (e.g., Action: retrieve_pt_question: [specify question based on some logic])
 3. web_search: 
 Search the web for the answer to a question about SAT dates, deadlines, and updates or any other question that you don't have the answer to (e.g., Action: web_search: When is the next SAT?)
@@ -49,7 +48,7 @@ Example query:
 
 Conversation State: The student is practicing command of quantitative evidence from a graph while in a reading/writing session.
 Thought: I should pull a question from the reading and writing section testing command of quantitative evidence from a graph using retrieve_qb_question
-Action: retrieve_qb_question: We need a question from the reading and writing topic that tests command of quantiative evidence from a graph.
+Action: retrieve_questionbank_question: We need a question from the reading and writing topic that tests command of quantiative evidence from a graph.
 PAUSE
 
 You will then receive the result of your action.
@@ -65,6 +64,8 @@ Answer: Try this question -- let me know if you get stuck.
 The loop will end here now that you have provided an answer.
 
 Note: {potential_topic_confusion}
+
+Once they answer a question correctly, ask them if they are ready for another question.
 
 """.strip()
 
@@ -108,7 +109,7 @@ class Agent:
 
     def execute(self):
         completion = client.chat.completions.create(
-                        model="gpt-4o-mini", 
+                        model="gpt-4o", 
                         temperature=0.7,
                         messages=self.messages)
         return completion.choices[0].message.content
@@ -219,7 +220,12 @@ question_descriptions = [
     9. Rhetorical Synthesis: involes adding a sentence to a paragprah to bolster or support the main idea or argument
     10. Text Structure and Purpose: asks the student to identify the purpose of a sentence within a paragraph
     11. Transitions: tests knowledge of transitional words and phrases like however, nevertheless, consequently, etc...
-    12. Words in Context: tests knowledge of vocabulary in context"""
+    12. Words in Context: tests knowledge of vocabulary in context""",
+
+    """Command of Quantiative Evidence:
+    1. Students are given a bar graph and asked to interpret it and/or perform calculations.
+    2. Students are given a table and asked to interpret it and/or perform calculations.
+    """
 ]
 
 question_mapping = {
@@ -330,13 +336,17 @@ question_mapping = {
         11: "transitions_questions",
         12: "words_in context_questions"
     },
+    17: {  # Command of Quantitative Evidence
+        1: "cqe_bar_graph_questions",
+        2: "cqe_table_questions"
+    }
 }
 
 question_topics = """
 
 Note: If the student has mastered most skills, the complex numerical reasoning problems under advanced arithmetic and the geometry/trigonometry challenge problems under geometry are good options.
 
-1. Data Analysis: Frequency Tables, Data Inference, Missing Number Given Average, Measures of Center, Measures of Spread
+1. Data Analysis: Frequency Tables, Data Inference, Missing Number Given Average, Measures of Center, Measures of Spread.  Note: these are in the Math section of the SAT, not the Reading and Writing section.
 2. Quadratics: Discriminant, Quadratic Formula, Factoring, Remainder Theorem, Vertex from factored form, standard form, and vertex form, Vieta's Formula (Sum of Roots)
 3. Geometry: Triangle Sum Theorem, Special Triangles, Area and Volume, Parallel lines and a transversal, Pythagorean Theorem, Congruence Proofs (SAS, ASA, SSS, AAS), Arcs and Central Angles, Similar Triangles, Equation of a Circle, Distance Formula, Midpoint Formula, Geometry and Trigonometry Challenge Problems
 4. Linear Equations: Linear Relationship Word Problems, Interpreting Linear Equations, Equation from two points (function notation), Slopes of Parallel/Perpendicular Lines
@@ -351,7 +361,8 @@ Note: If the student has mastered most skills, the complex numerical reasoning p
 13. Probability: From a table, 'and', 'or'
 14. Nonlinear Functions: Local extrema and intercepts from graphs
 15. Intercepts: From multiple equation types
-16. Reading and Writing: Command of textual evidence, sentence boundaries, grammar, command of quantitative evidence given a table or graph, words in context, and expression of ideas
+16. Reading and Writing: Command of textual evidence, sentence boundaries, grammar, words in context, and expression of ideas
+17. Command of Quantitative Evidence: Given a bar graph or table.  Note: this is the quantitative portion of the Reading and Writing section.
 """
 
 def determine_exact_question_type(topic_description: str, need_description: str) -> str:
@@ -407,7 +418,7 @@ def determine_question_type(need_description: str, question_topics: dict) -> lis
     
     return topic_number, question_typenum_within_topic
 
-def retrieve_qb_question(need_description:str, user_id: int, db: Session):
+def retrieve_questionbank_question(need_description:str, user_id: int, db: Session):
        
 
     topic_number, question_typenum_within_topic = determine_question_type(need_description, question_topics)
@@ -445,7 +456,7 @@ def retrieve_qb_question(need_description:str, user_id: int, db: Session):
 
     return question
 
-def retrieve_pt_question(need_description:str, user_id: int, db: Session):
+def retrieve_practicetest_question(need_description:str, user_id: int, db: Session):
     #logic
     
     question = PracticeTestQuestion().get_random_question()
@@ -464,8 +475,8 @@ def web_search(query):
     return "\n".join([result['snippet'] for result in results])
 
 known_actions = {
-    "retrieve_qb_question": retrieve_qb_question,
-    "retrieve_pt_question": retrieve_pt_question,
+    "retrieve_questionbank_question": retrieve_questionbank_question,
+    "retrieve_practicetest_question": retrieve_practicetest_question,
     "search the web": web_search
   
 }

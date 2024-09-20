@@ -97,10 +97,10 @@ def update_question_bank(session):
     session.commit()
 
 
-Session = sessionmaker(bind=engine)
-session = Session()
-update_question_bank(session)
-session.close()
+# Session = sessionmaker(bind=engine)
+# session = Session()
+# update_question_bank(session)
+# session.close()
 
 
 
@@ -410,10 +410,10 @@ def backup_question_bank_to_csv(session, output_file: str):
                 question.tabular_data,
                 question.choices
             ])
-# Session = sessionmaker(bind=engine)
-# session = Session()
-# backup_practice_test_to_csv(session, "qb_backup.csv")
-# session.close()
+Session = sessionmaker(bind=engine)
+session = Session()
+backup_practice_test_to_csv(session, "qb_backup.csv")
+session.close()
 
 
 

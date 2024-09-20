@@ -54,15 +54,19 @@ async def update_conversation(conversation_id: str, user_id: UUID = Form(...), c
 
     chatbot_response_text, question_metadata = query_agent(conversation_history, user_id, db)
 
-    tabular_data_string = str(question_metadata.tabular_data)
-    choices_string = str(question_metadata.choices)
-
-    payload_to_chatbot = f"""chatbot response:{chatbot_response_text} \n Note: of the following information, the user will only be shown images/tables and the question content, not answer explanations or correct answers.
-    figure description:{question_metadata.figure_description} \n 
-    equation:{question_metadata.equation} \n question content:{question_metadata.question_content} \n
-    answer explanation:{question_metadata.answer_explanation} \n correct answer:{question_metadata.correct_answer} \n
-    tabular data:{tabular_data_string} \n choices:{choices_string}
-    """
+    if question_metadata is None:
+        question_metadata = {}
+        payload_to_chatbot = ""
+    else:
+        tabular_data_string = str(question_metadata.tabular_data)
+        choices_string = str(question_metadata.choices)
+        payload_to_chatbot = f"""chatbot response:{chatbot_response_text} \n Note: of the following information, the user will only be shown images/tables and the question content, not answer explanations or correct answers.
+        figure description:{question_metadata.figure_description} \n 
+        equation:{question_metadata.equation} \n question content:{question_metadata.question_content} \n
+        answer explanation:{question_metadata.answer_explanation} \n correct answer:{question_metadata.correct_answer} \n
+        tabular data:{tabular_data_string} \n choices:{choices_string}
+        """
+    
 
     # Append chatbot response to the conversation history
     bot_msg = Message(user_id=user_id, content=payload_to_chatbot, role='assistant', conversation_id=conversation_id)
@@ -72,23 +76,38 @@ async def update_conversation(conversation_id: str, user_id: UUID = Form(...), c
     print("Chatbot Message Added to DB")
 
     # Return the updated conversation with chatbot response and question metadata, serialized using Pydantic
+#     return GetQBQuestionResponse(
+#     chatbot_response = chatbot_response_text,
+#     id=question_metadata.id,
+#     topic=question_metadata.topic,
+#     sub_topic=question_metadata.sub_topic,
+#     question_number_in_subtopic=question_metadata.question_number_in_subtopic,
+#     figure_description=question_metadata.figure_description,
+#     image=question_metadata.image,
+#     equation=question_metadata.equation,
+#     svg=question_metadata.svg,
+#     question_content=question_metadata.question_content,
+#     answer_explanation=question_metadata.answer_explanation,
+#     correct_answer=question_metadata.correct_answer,
+#     tabular_data=question_metadata.tabular_data or {},  # ensure this is a dictionary
+#     choices=question_metadata.choices or {}  # ensure this is a dictionary
+# )
     return GetQBQuestionResponse(
-    chatbot_response = chatbot_response_text,
-    id=question_metadata.id,
-    topic=question_metadata.topic,
-    sub_topic=question_metadata.sub_topic,
-    question_number_in_subtopic=question_metadata.question_number_in_subtopic,
-    figure_description=question_metadata.figure_description,
-    image=question_metadata.image,
-    equation=question_metadata.equation,
-    svg=question_metadata.svg,
-    question_content=question_metadata.question_content,
-    answer_explanation=question_metadata.answer_explanation,
-    correct_answer=question_metadata.correct_answer,
-    tabular_data=question_metadata.tabular_data or {},  # ensure this is a dictionary
-    choices=question_metadata.choices or {}  # ensure this is a dictionary
-)
-
+        chatbot_response=chatbot_response_text,
+        id=getattr(question_metadata, 'id', 0),
+        topic=getattr(question_metadata, 'topic', ''),
+        sub_topic=getattr(question_metadata, 'sub_topic', ''),
+        question_number_in_subtopic=getattr(question_metadata, 'question_number_in_subtopic', 0),
+        figure_description=getattr(question_metadata, 'figure_description', ''),
+        image=getattr(question_metadata, 'image', ""),
+        equation=getattr(question_metadata, 'equation', ''),
+        svg=getattr(question_metadata, 'svg', ""),
+        question_content=getattr(question_metadata, 'question_content', ''),
+        answer_explanation=getattr(question_metadata, 'answer_explanation', ''),
+        correct_answer=getattr(question_metadata, 'correct_answer', ''),
+        tabular_data=getattr(question_metadata, 'tabular_data', {}),
+        choices=getattr(question_metadata, 'choices', {})
+    )
 
 
 
